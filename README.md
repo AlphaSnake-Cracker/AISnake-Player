@@ -1,1 +1,9 @@
-To auto-play the classic game *Snake* by "AI"
+# Snake AI-Player Project
+
+## Intro
+This project is established under the assignment of the third semester of 2021 - 2022 School Year
+
+## Current Priority
+* **Pathing**
+    * Weight Caculating
+    * BFS / A-Star
