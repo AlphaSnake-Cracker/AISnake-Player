@@ -1,10 +1,10 @@
-#ifndef HEADDOTC
-#define HEADDOTC
+#ifndef HEAD_H
+#define HEAD_H
 
 #include <limits.h>
 
-#define ROW 5
-#define COL 7
+#define ROW 100
+#define COL 100
 
 #define MAX_LEN (ROW + COL)
 
@@ -17,7 +17,7 @@ typedef struct _coord
 typedef struct _block
 {
     int len;
-    coord dots[MAX_LEN];
+    coord elems[MAX_LEN];
 } block;
 
 typedef struct _rect
@@ -27,6 +27,12 @@ typedef struct _rect
     int right;
     int left;
 } rect;
+
+typedef struct _mapt
+{
+    coord size;
+    int elems[ROW][COL];
+} mapt;
 
 // anticlockwise
 coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};

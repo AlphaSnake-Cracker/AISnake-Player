@@ -4,8 +4,7 @@
 #include <stdio.h>
 #endif
 
-#include "head.c"
-#include "dir.c"
+#include "../includes/head.h"
 
 #define WALL 1
 #define BLANK 0
@@ -15,14 +14,14 @@ int route(int map[ROW][COL], coord start, coord dest);
 void get_wall(coord point, block *wall, int map[ROW][COL]);
 rect get_rect(block wall);
 block simple(coord start, coord dest);
-int in_map(coord point, int map[ROW][COL]);
+int in_map(coord point, int down_limit, int right_limit);
 
 #ifdef DEBUG
 
-#define PRT(block)                                           \
-    for (int i = 0; i < block.len; i++)                      \
-    {                                                        \
-        printf("(%d,%d)", block.dots[i].x, block.dots[i].y); \
+#define PRT(block)                                             \
+    for (int i = 0; i < block.len; i++)                        \
+    {                                                          \
+        printf("(%d,%d)", block.elems[i].x, block.elems[i].y); \
     }
 
 int main()
@@ -52,14 +51,14 @@ int route(int map[ROW][COL], coord start, coord dest)
 #ifdef DEBUG
     for (int i = 0; i < line.len; i++)
     {
-        printf("(%d,%d)", line.dots[i].x, line.dots[i].y);
+        printf("(%d,%d)", line.elems[i].x, line.elems[i].y);
     }
 #endif
 
     for (int i = 0; i < line.len; i++)
     {
         // now only sigle blocker
-        if (map[line.dots[i].x][line.dots[i].y] == WALL)
+        if (map[line.elems[i].x][line.elems[i].y] == WALL)
         {
             // get_wall();
             break;
@@ -73,7 +72,7 @@ block simple(coord start, coord dest)
     // line.len = 0;
     coord tmp = start;
 
-    line.dots[line.len] = tmp;
+    line.elems[line.len] = tmp;
     line.len++;
 
     if (dest.y - start.y >= 0)
@@ -81,7 +80,7 @@ block simple(coord start, coord dest)
         for (int i = 0; i < dest.y - start.y; i++)
         {
             tmp.y++;
-            line.dots[line.len] = tmp;
+            line.elems[line.len] = tmp;
             line.len++;
         }
     }
@@ -90,7 +89,7 @@ block simple(coord start, coord dest)
         for (int i = 0; i < start.y - dest.y; i++)
         {
             tmp.y--;
-            line.dots[line.len] = tmp;
+            line.elems[line.len] = tmp;
             line.len++;
         }
     }
@@ -100,7 +99,7 @@ block simple(coord start, coord dest)
         for (int i = 0; i < dest.x - start.x; i++)
         {
             tmp.x++;
-            line.dots[line.len] = tmp;
+            line.elems[line.len] = tmp;
             line.len++;
         }
     }
@@ -109,7 +108,7 @@ block simple(coord start, coord dest)
         for (int i = 0; i < start.x - dest.x; i++)
         {
             tmp.x--;
-            line.dots[line.len] = tmp;
+            line.elems[line.len] = tmp;
             line.len++;
         }
     }
@@ -120,14 +119,14 @@ block simple(coord start, coord dest)
 void get_wall(coord point, block *wall, int map[ROW][COL])
 {
     // block wall = {0};
-    (*wall).dots[(*wall).len++] = point;
+    (*wall).elems[(*wall).len++] = point;
     map[point.x][point.y] = SEARCHT_WALL;
 
     coord nearby;
     for (int i = 0; i < 8; i++)
     {
         nearby = add(point, surround[i]);
-        if (in_map(nearby, map))
+        if (in_map(nearby, ROW, COL))
         {
             if (map[nearby.x][nearby.y] == WALL)
             {
@@ -138,13 +137,13 @@ void get_wall(coord point, block *wall, int map[ROW][COL])
     map[point.x][point.y] == WALL;
 }
 
-int in_map(coord point, int map[ROW][COL])
+int in_map(coord point, int down_limit, int right_limit)
 {
-    if (point.x < 0 || point.x >= ROW)
+    if (point.x < 0 || point.x >= down_limit)
     {
         return 0;
     }
-    if (point.y < 0 || point.y >= COL)
+    if (point.y < 0 || point.y >= right_limit)
     {
         return 0;
     }
@@ -157,21 +156,21 @@ rect get_rect(block wall)
 
     for (int i = 0; i < wall.len; i++)
     {
-        if (wall.dots[i].x > closure.down)
+        if (wall.elems[i].x > closure.down)
         {
-            closure.down = wall.dots[i].x;
+            closure.down = wall.elems[i].x;
         }
-        if (wall.dots[i].x < closure.up)
+        if (wall.elems[i].x < closure.up)
         {
-            closure.up = wall.dots[i].x;
+            closure.up = wall.elems[i].x;
         }
-        if (wall.dots[i].y > closure.right)
+        if (wall.elems[i].y > closure.right)
         {
-            closure.right = wall.dots[i].y;
+            closure.right = wall.elems[i].y;
         }
-        if (wall.dots[i].y < closure.left)
+        if (wall.elems[i].y < closure.left)
         {
-            closure.left = wall.dots[i].y;
+            closure.left = wall.elems[i].y;
         }
     }
     return closure;
