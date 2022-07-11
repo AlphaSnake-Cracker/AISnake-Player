@@ -1,8 +1,11 @@
 #define DEBUG
 
 #include "../includes/head.h"
+#include <string.h>
 
 #ifdef DEBUG
+#define VALUE_ROW 7
+#define VALUE_COL 15
 #include <assert.h>
 #include <stdio.h>
 #endif
@@ -16,7 +19,7 @@
 
 int in_map(coord point, coord size);
 int route(coord start, block foods, block wall, coord size);
-mapt get_value(block foods, block wall, coord size);
+int get_value(coord point, block foods, block wall, coord size);
 int EVALUATE(int distence, coord size);
 
 #ifdef DEBUG
@@ -79,7 +82,7 @@ int route(coord start, block foods, block wall, coord size)
 
     // anticlockwise
     coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
-    mapt values = get_value(foods, wall, size);
+
     coord current = start;
 
     // !=================================================!
@@ -87,17 +90,18 @@ int route(coord start, block foods, block wall, coord size)
 
     coord tmp = {0, 0};
 
-#define TRYING
+// #define TRYING
 #ifdef TRYING
     int times = 0;
     while (times <= 7 * 15)
 #else
     // while dest not reached
-    while (!(current.x == foods.elems[0].x && current.y == foods.elems[0].y))
+    while (!included_in(current, foods))
 #endif
     {
         int max = INT_MIN;
         int ptr = -1;
+        int value_got;
         for (int i = 0; i < 4; i++)
         {
             tmp = add(current, directions[i]);
@@ -105,9 +109,10 @@ int route(coord start, block foods, block wall, coord size)
             {
                 if (!(tmp.x == last.x && tmp.y == last.y))
                 {
-                    if (max < values.elems[tmp.x][tmp.y])
+                    value_got = get_food_value(current, foods);
+                    if (max < value_got)
                     {
-                        max = values.elems[tmp.x][tmp.y];
+                        max = value_got;
                         ptr = i;
                     }
                 }
@@ -118,6 +123,11 @@ int route(coord start, block foods, block wall, coord size)
         assert(ptr != -1);
         current = add(current, directions[ptr]);
         printf("%d %d\n", current.x, current.y);
+        int position = included_in(current, foods);
+        if (position != -1)
+        {
+            // foods;
+        }
 #ifdef TRYING
         times++;
 #endif
@@ -137,53 +147,40 @@ int in_map(coord point, coord size)
     return 1;
 }
 
-mapt get_value(block foods, block wall, coord size)
+int get_value(coord point, block foods, block wall, coord size)
 {
-    mapt values = {size};
-    for (int i = 0; i < values.size.x; i++)
+    int value = 0;
+    value += get_food_value(point, foods);
+    return value;
+}
+
+// must called before getting wall value
+int get_food_value(coord point, block foods)
+{
+    int len;
+    int value;
+    int value_tmp;
+    coord size = {VALUE_ROW, VALUE_COL};
+
+    for (int index = 0; index < foods.len; index++)
     {
-        for (int j = 0; j < values.size.y; j++)
+        len = ABSOLUTE(point.x - foods.elems[index].x) + ABSOLUTE(point.y - foods.elems[index].y);
+
+        value_tmp = EVALUATE(len, size);
+
+        if (value != INT_MAX)
         {
-            int len = 0;
-            int value = 0;
-            for (int index = 0; index < foods.len; index++)
+            if (value_tmp != INT_MAX)
             {
-                len = ABSOLUTE(i - foods.elems[index].x) + ABSOLUTE(j - foods.elems[index].y);
-                value = EVALUATE(len, size);
-
-                if (values.elems[i][j] != INT_MIN && values.elems[i][j] != INT_MAX)
-                {
-                    if (value != INT_MAX)
-                    {
-                        // values.elems[i][j] += value;
-                        values.elems[i][j] += 10 * value;
-                    }
-                    else
-                    {
-                        values.elems[i][j] = INT_MAX;
-                    }
-                }
+                value += 3 * value;
             }
-            for (int index = 0; index < wall.len; index++)
+            else
             {
-                len = ABSOLUTE(i - wall.elems[index].x) + ABSOLUTE(j - wall.elems[index].y);
-                value = EVALUATE(len, size);
-
-                if (values.elems[i][j] != INT_MIN && values.elems[i][j] != INT_MAX)
-                {
-                    if (value != INT_MAX)
-                    {
-                        values.elems[i][j] -= value;
-                    }
-                    else
-                    {
-                        values.elems[i][j] = INT_MIN;
-                    }
-                }
+                value = INT_MAX;
             }
         }
     }
-    return values;
+    return value;
 }
 
 int EVALUATE(int distence, coord size)
@@ -198,14 +195,41 @@ int EVALUATE(int distence, coord size)
     }
 }
 
+// return position of "point" in "any" if included
+// return -1 if not included
 int included_in(coord point, block any)
 {
     for (int i = 0; i < any.len; i++)
     {
         if (point.x == any.elems[i].x && point.y == any.elems[i].y)
         {
-            return 1;
+            return i;
         }
     }
-    return 0;
+    return -1;
+}
+
+block block_del(block any, int position)
+{
+}
+
+int get_wall_value()
+{
+    // for (int index = 0; index < wall.len; index++)
+    // {
+    //     len = ABSOLUTE(i - wall.elems[index].x) + ABSOLUTE(j - wall.elems[index].y);
+    //     value = EVALUATE(len, size);
+
+    //     if (values.elems[i][j] != INT_MIN && values.elems[i][j] != INT_MAX)
+    //     {
+    //         if (value != INT_MAX)
+    //         {
+    //             values.elems[i][j] -= value;
+    //         }
+    //         else
+    //         {
+    //             values.elems[i][j] = INT_MIN;
+    //         }
+    //     }
+    // }
 }
