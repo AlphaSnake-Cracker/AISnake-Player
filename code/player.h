@@ -9,24 +9,44 @@
 #include "../include/playerbase.h"
 #include <stdio.h>
 
-void init(struct Player *player) {
-	// This function will be executed at the begin of each game, only once.
+//================================================
+#include <bases.h>
+// #include <unistd.h>
+
+queuet body = {0, 0}; // not circular queue
+void init(struct Player *player)
+{
+	coord point = {-1, -1};
+
+	for (int i = 0; i < player->row_cnt; i++)
+	{
+		for (int j = 0; j < player->col_cnt; j++)
+		{
+			if (player->mat[i][j] == PLAYER_A)
+			{
+				body.elems[body.rear++] = (point.x = i, point.y = j, point);
+			}
+		}
+	}
 }
 
-int step[4][2] = {0, 1, 0, -1, 1, 0, -1, 0};
-struct Point walk(struct Player *player) {
-	for (int i = 0; i < player->row_cnt; i++) {
-		for (int j = 0; j < player->col_cnt; j++) {
-			printf("%c", player->mat[i][j]);
+// int step[4][2] = {0, 1, 0, -1, 1, 0, -1, 0};
+struct Point walk(struct Player *player)
+{
+	coord point = {-1, -1};
+
+	// get foods
+	block foods = {0};
+	for (int i = 0; i < player->row_cnt; i++)
+	{
+		for (int j = 0; j < player->col_cnt; j++)
+		{
+			if (player->mat[i][j] == FOOD || player->mat[i][j] == SHIELD)
+			{
+				foods.elems[foods.len++] = (point.x = i, point.y = j, point);
+			}
 		}
-		printf("\n");
 	}
-	// This function will be executed in each round.
-	for (int i = 0; i < 4; i++) {
-		int dx = player->your_posx + step[i][0], dy = player->your_posy + step[i][1];
-		if (dx >= 0 && dx < player->row_cnt && dy >= 0 && dy < player->col_cnt && (player->mat[dx][dy] == '.' || player->mat[dx][dy] == 'o' || player->mat[dx][dy] == 'O')) {
-			return initPoint(dx, dy);
-		}
-	}
-	return initPoint(player->your_posx, player->your_posy);
+
+	// return initPoint(, );
 }

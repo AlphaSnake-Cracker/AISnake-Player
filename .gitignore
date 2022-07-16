@@ -1,2 +1,8 @@
-/bin/**
+.gitignore
 .vscode
+
+*.dsct
+*.bak
+*.exe
+*.in
+*.out
