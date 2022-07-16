@@ -1,2 +1,6 @@
-/bin/**
 .vscode
+bin/check_computer
+bin/check_player
+bin/computer 
+bin/player
+log/judge/*
