@@ -72,16 +72,19 @@ coord add(coord A, coord B)
 int overlap(coord point, queuet body, int len, int qmax)
 {
     int count = 0;
-    for (int i = body.front; count < len; count++)
+    for (int i = body.rear - 1; count < len; count++)
     {
-        i = i % qmax;
         if (point.x == body.elems[i].x && point.y == body.elems[i].y)
         {
             return 1;
         }
-        i++;
+
+        i--;
+        if (i == -1)
+        {
+            i = qmax - 1;
+        }
     }
     return 0;
 }
-
 #endif // BASE_H
