@@ -4,4 +4,4 @@ bin/check_player
 bin/computer 
 bin/player
 log/judge/*
-map/map.txt
+data/map.txt

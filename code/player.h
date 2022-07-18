@@ -6,8 +6,11 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include "../include/playerbase.h"
 #include <stdio.h>
+
+#define DEBUG
 
 typedef struct Queue_Element
 {
@@ -91,6 +94,8 @@ void Weighting(struct Player *player, Path path[20][20], int weight[20][20])
 			{
 				int x = i;
 				int y = j;
+				if (path[x][y].prev_x == 0 && path[x][y].prev_y == 0)
+					continue;
 				while (path[x][y].prev_x != -1 && path[x][y].prev_y != -1)
 				{
 					weight[x][y] += 1;
@@ -104,6 +109,8 @@ void Weighting(struct Player *player, Path path[20][20], int weight[20][20])
 			{
 				int x = i;
 				int y = j;
+				if (path[x][y].prev_x == 0 && path[x][y].prev_y == 0)
+					continue;
 				while (path[x][y].prev_x != -1 && path[x][y].prev_y != -1)
 				{
 					weight[x][y] += 1;
@@ -124,12 +131,14 @@ void init(struct Player *player)
 
 struct Point walk(struct Player *player)
 {
+	#ifdef DEBUG
 	for (int i = 0; i < player->row_cnt; i++)
 	{
 		for (int j = 0; j < player->col_cnt; j++)
 			printf("%c", player->mat[i][j]);
 		printf("\n");
 	}
+	#endif
 	// This function will be executed in each round.
 	Path path[20][20];
 	BFS_Pathing(player, path);
@@ -150,6 +159,23 @@ struct Point walk(struct Player *player)
 			max_w = weight[nx][ny];
 			x = nx;
 			y = ny;
+		}
+	}
+	if (x == player -> your_posx && y == player -> your_posy)
+	{
+		int i = rand();
+		while (1)
+		{
+			nx = player -> your_posx + step[i % 4][0];
+			ny = player -> your_posy + step[i % 4][1];
+			if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '#')
+			{
+				i = rand();
+				continue;
+			}
+			x = nx;
+			y = ny;
+			break;
 		}
 	}
 	return initPoint(x, y);
