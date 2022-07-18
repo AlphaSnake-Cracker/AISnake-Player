@@ -73,15 +73,24 @@ int overlap(coord point, queuet body, int len, int qmax);
 double evaluate(int distence);
 double get_value_by_food(coord point, arrayt dists);
 int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow);
+int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size);
 
 queuet body = {0, 0}; // not circular queue
 int max_len = -1, current_len = -1;
 coord head = {-1, -1};
 int last_direction = -1;
+int shrink_interval = -1;
+int shrink_index = -1;
 
 void init(struct Player *player)
 {
-	max_len = (int)ceil((player->row_cnt + player->col_cnt) * (3.0 / 8.0));
+	int m = player->row_cnt;
+	int n = player->col_cnt;
+
+	max_len = (int)ceil((m + n) * (3.0 / 8.0));
+	shrink_interval = (int)ceil(m * n * 4 / (n < m ? n : m));
+	shrink_index = 0;
+
 	current_len = 1;
 
 	coord point = {-1, -1};
@@ -155,8 +164,11 @@ struct Point walk(struct Player *player)
 #endif
 
 	double max_value = INT_MIN;
+	coord next = {-1, -1};
 	int max_ptr = -1;
+
 	coord size = {player->row_cnt, player->col_cnt};
+
 	for (int i = 0; i < 4; i++)
 	{
 		if (i != (last_direction + 2) % 4)
@@ -171,7 +183,16 @@ struct Point walk(struct Player *player)
 #endif
 			}
 
-			double value = get_value_by_food(tmp, dists);
+			double value = -1;
+			if (player->round_to_shrink < 3 && is_in_danger(tmp, shrink_index, size))
+			{
+				value = 0.001;
+			}
+			else
+			{
+				value = get_value_by_food(tmp, dists);
+			}
+
 #ifdef ROUTE_DEBUG
 			printf("(%d,%d): %lf\n", directions[i].x, directions[i].y, value);
 #endif
@@ -179,14 +200,15 @@ struct Point walk(struct Player *player)
 			{
 				max_value = value;
 				max_ptr = i;
+				next = tmp;
 			}
 		}
 	}
 #ifdef DEBUG
-	printf("dir: (%d,%d)\n", directions[max_ptr].x, directions[max_ptr].y);
+	printf("dir: (%d,%d)\n", next.x, next.y);
 #endif
 
-	head = add(head, directions[max_ptr]);
+	head = next;
 	last_direction = max_ptr;
 
 	if (player->mat[head.x][head.y] == FOOD || player->mat[head.x][head.y] == SHIELD)
@@ -203,6 +225,11 @@ struct Point walk(struct Player *player)
 	else
 	{
 		body.front = (body.front + 1) % QMAX;
+	}
+
+	if (player->round_to_shrink == 1)
+	{
+		shrink_index++;
 	}
 
 	return initPoint(head.x, head.y);
@@ -373,4 +400,19 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body, int g
 		}
 	}
 	return INT_MAX;
+}
+
+int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size)
+{
+	if (point.x == shrink_index || point.x == size.x - shrink_index)
+	{
+		return 1;
+	}
+
+	if (point.y == shrink_index || point.y == size.y - shrink_index)
+	{
+		return 1;
+	}
+
+	return 0;
 }

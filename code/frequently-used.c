@@ -1,3 +1,4 @@
+// deadend with food
 // int grow
 
 #ifdef DEBUG
