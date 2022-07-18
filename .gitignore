@@ -10,3 +10,8 @@ bin/check_player
 bin/computer 
 bin/player
 log/judge/*
+
+snake.c
+snake
+t
+frequently-used.txt

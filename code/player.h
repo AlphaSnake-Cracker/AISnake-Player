@@ -76,13 +76,16 @@ double evaluate(int distence);
 double get_value_by_food(coord point, arrayt dists);
 int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow);
 int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size);
+#ifdef DEBUG
+void print_queue(queuet queue, const char *s);
+#endif
 
 queuet body = {0, 0}; // not circular queue
 int max_len = -1, current_len = -1;
 coord head = {-1, -1};
 int last_direction = -1;
-int shrink_interval = -1;
 int shrink_index = -1;
+// int shrink_interval = -1;
 
 void init(struct Player *player)
 {
@@ -90,7 +93,7 @@ void init(struct Player *player)
 	int n = player->col_cnt;
 
 	max_len = (int)ceil((m + n) * (3.0 / 8.0));
-	shrink_interval = (int)ceil(m * n * 4 / (n < m ? n : m));
+	// shrink_interval = (int)ceil(m * n * 4 / (n < m ? n : m));
 	shrink_index = 0;
 
 	current_len = 1;
@@ -275,6 +278,7 @@ int overlap(coord point, queuet body, int len, int qmax)
 }
 
 // must called before getting wall value
+// return -1 if any dist is INT_MAX
 double get_value_by_food(coord point, arrayt dists)
 {
 	int dist;
@@ -286,6 +290,12 @@ double get_value_by_food(coord point, arrayt dists)
 		dist = dists.elems[index];
 
 		value_tmp = evaluate(dist);
+
+		if (value_tmp == -1)
+		{
+			// value = -1;
+			return -1;
+		}
 
 		if (value != INT_MAX)
 		{
@@ -304,6 +314,11 @@ double get_value_by_food(coord point, arrayt dists)
 
 double evaluate(int distence)
 {
+	if (distence == INT_MAX)
+	{
+		return -1;
+	}
+
 	if (distence > 0)
 	{
 		return (1.0 / distence);
@@ -314,6 +329,7 @@ double evaluate(int distence)
 	}
 }
 
+// ret INT_MAX if: 1. not valid 2. unreachable
 int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow)
 {
 	if (in_map(start, size))
@@ -359,6 +375,10 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body, int g
 		rear_tmp = queue.rear;
 		count++;
 
+#ifdef DEBUG
+		// print_queue(queue, "search queue");
+#endif
+
 		// int flag = 0;
 		while (queue.front != rear_tmp)
 		{
@@ -394,7 +414,10 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body, int g
 		}
 		if (grow == 0)
 		{
-			body.front++; //======================================================================
+			if (body.rear != body.front)
+			{
+				body.front = (body.front + 1) % QMAX;
+			}
 		}
 		else
 		{
@@ -406,15 +429,37 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body, int g
 
 int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size)
 {
-	if (point.x == shrink_index || point.x == size.x - shrink_index)
+	if ((point.x == shrink_index ||
+		 point.x == size.x - shrink_index) &&
+		shrink_index <= point.y &&
+		point.y <= shrink_index)
 	{
+
 		return 1;
 	}
-
-	if (point.y == shrink_index || point.y == size.y - shrink_index)
+	if ((point.y == shrink_index ||
+		 point.y == size.y - shrink_index) &&
+		shrink_index <= point.x &&
+		point.x <= shrink_index)
 	{
+
 		return 1;
 	}
-
 	return 0;
 }
+
+#ifdef DEBUG
+void print_queue(queuet queue, const char *s)
+{
+	int count = 0;
+	int l = (queue.rear + QMAX - queue.front) % QMAX;
+
+	printf("%s: ", s);
+	for (int i = queue.front; count < l; count++)
+	{
+		printf("(%d,%d)", queue.elems[i].x, queue.elems[i].y);
+		i = (i + 1) % QMAX;
+	}
+	puts("");
+}
+#endif
