@@ -168,7 +168,7 @@ struct Point walk(struct Player *player)
 		{
 			nx = player -> your_posx + step[i % 4][0];
 			ny = player -> your_posy + step[i % 4][1];
-			if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '#')
+			if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '2')
 			{
 				i = rand();
 				continue;
