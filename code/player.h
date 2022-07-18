@@ -72,7 +72,7 @@ int in_map(coord point, coord size);
 int overlap(coord point, queuet body, int len, int qmax);
 double evaluate(int distence);
 double get_value_by_food(coord point, arrayt dists);
-int get_dist(coord dest, coord start, char **map, coord size, queuet body);
+int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow);
 
 queuet body = {0, 0}; // not circular queue
 int max_len = -1, current_len = -1;
@@ -165,7 +165,7 @@ struct Point walk(struct Player *player)
 			arrayt dists = {0};
 			for (int i = 0; i < foods.len; i++)
 			{
-				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body);
+				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body, max_len - current_len);
 #ifdef ROUTE_DEBUG
 				printf("from(%d,%d),to(%d,%d)is: %d\n", tmp.x, tmp.y, foods.elems[i].x, foods.elems[i].y, dists.elems[dists.len - 1]);
 #endif
@@ -285,7 +285,7 @@ double evaluate(int distence)
 	}
 }
 
-int get_dist(coord dest, coord start, char **map, coord size, queuet body)
+int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow)
 {
 	if (in_map(start, size))
 	{
@@ -330,7 +330,7 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body)
 		rear_tmp = queue.rear;
 		count++;
 
-		int flag = 0;
+		// int flag = 0;
 		while (queue.front != rear_tmp)
 		{
 			current = queue.elems[queue.front++];
@@ -354,7 +354,7 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body)
 
 						if (searched[tmp.x][tmp.y] == 0)
 						{
-							flag = 1;
+							// flag = 1;
 							searched[tmp.x][tmp.y] = 1;
 							queue.elems[queue.rear++] = tmp;
 							queue.rear = queue.rear % QMAX;
@@ -363,9 +363,13 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body)
 				}
 			}
 		}
-		if (flag == 1)
+		if (grow == 0)
 		{
 			body.front++; //======================================================================
+		}
+		else
+		{
+			grow--;
 		}
 	}
 	return INT_MAX;
