@@ -70,8 +70,8 @@ coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 coord add(coord A, coord B);
 int in_map(coord point, coord size);
 int overlap(coord point, queuet body, int len, int qmax);
-int evaluate(int distence, coord size);
-int get_food_value(coord point, arrayt dists);
+double evaluate(int distence);
+double get_value_by_food(coord point, arrayt dists);
 int get_dist(coord dest, coord start, char **map, coord size, queuet body);
 
 queuet body = {0, 0}; // not circular queue
@@ -154,7 +154,7 @@ struct Point walk(struct Player *player)
 	puts("");
 #endif
 
-	int max_value = INT_MIN;
+	double max_value = INT_MIN;
 	int max_ptr = -1;
 	coord size = {player->row_cnt, player->col_cnt};
 	for (int i = 0; i < 4; i++)
@@ -171,9 +171,9 @@ struct Point walk(struct Player *player)
 #endif
 			}
 
-			int value = get_food_value(tmp, dists);
+			double value = get_value_by_food(tmp, dists);
 #ifdef ROUTE_DEBUG
-			printf("(%d,%d): %d\n", directions[i].x, directions[i].y, value);
+			printf("(%d,%d): %lf\n", directions[i].x, directions[i].y, value);
 #endif
 			if (max_value <= value)
 			{
@@ -246,18 +246,17 @@ int overlap(coord point, queuet body, int len, int qmax)
 }
 
 // must called before getting wall value
-int get_food_value(coord point, arrayt dists)
+double get_value_by_food(coord point, arrayt dists)
 {
-	int len;
-	int value = -1;
-	int value_tmp;
-	coord size = {ROW_MAX, COL_MAX};
+	int dist;
+	double value = 0;
+	double value_tmp;
 
 	for (int index = 0; index < dists.len; index++)
 	{
-		len = dists.elems[index];
+		dist = dists.elems[index];
 
-		value_tmp = evaluate(len, size);
+		value_tmp = evaluate(dist);
 
 		if (value != INT_MAX)
 		{
@@ -274,11 +273,11 @@ int get_food_value(coord point, arrayt dists)
 	return value;
 }
 
-int evaluate(int distence, coord size)
+double evaluate(int distence)
 {
 	if (distence > 0)
 	{
-		return size.x + size.y - distence;
+		return (1.0 / distence);
 	}
 	else
 	{
