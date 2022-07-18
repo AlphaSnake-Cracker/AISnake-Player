@@ -16,6 +16,8 @@
 #define DEBUG
 #define ROUTE_DEBUG
 
+#define SHRINK_ALERT (8)
+
 #define ROW_MAX (20 + 5)
 #define COL_MAX (20 + 5)
 
@@ -184,7 +186,7 @@ struct Point walk(struct Player *player)
 			}
 
 			double value = -1;
-			if (player->round_to_shrink < 3 && is_in_danger(tmp, shrink_index, size))
+			if (player->round_to_shrink < SHRINK_ALERT && is_in_danger(tmp, shrink_index, size))
 			{
 				value = 0.001;
 			}
@@ -205,7 +207,7 @@ struct Point walk(struct Player *player)
 		}
 	}
 #ifdef DEBUG
-	printf("dir: (%d,%d)\n", next.x, next.y);
+	printf("next: (%d,%d)\n", next.x, next.y);
 #endif
 
 	head = next;
