@@ -15,6 +15,7 @@
 
 #define DEBUG
 #define ROUTE_DEBUG
+#define PRT_MAP
 
 #define SHRINK_ALERT (8)
 
@@ -89,6 +90,10 @@ int shrink_index = -1;
 
 void init(struct Player *player)
 {
+#ifdef PRT_MAP
+	puts("================================================================================================================");
+#endif
+
 	int m = player->row_cnt;
 	int n = player->col_cnt;
 
@@ -108,8 +113,8 @@ void init(struct Player *player)
 			{
 				point.x = i;
 				point.y = j;
-				body.elems[body.rear++] = point;
 				head = point;
+				body.elems[body.rear++] = head;
 			}
 		}
 	}
@@ -118,7 +123,7 @@ void init(struct Player *player)
 // int step[4][2] = {0, 1, 0, -1, 1, 0, -1, 0};
 struct Point walk(struct Player *player)
 {
-#ifdef DEBUG
+#ifdef PRT_MAP
 	for (int i = 0; i < player->row_cnt; i++)
 	{
 		for (int j = 0; j < player->col_cnt; j++)
@@ -128,20 +133,23 @@ struct Point walk(struct Player *player)
 		puts("");
 	}
 	puts("");
+#endif
 
+#ifdef DEBUG
 	printf("head: (%d,%d)\n", head.x, head.y);
-	printf("max_len: %d\n", max_len);
-	printf("current_len: %d\n", current_len);
-	printf("last_direction: %d\n", last_direction);
+	printf("round_to_shrink: %d\n", player->round_to_shrink);
+	// printf("max_len: %d\n", max_len);
+	// printf("current_len: %d\n", current_len);
+	// printf("last_direction: %d\n", last_direction);
 
-	puts("Body:");
-	int count = 0;
-	for (int i = body.front; count < (body.rear + QMAX - body.front) % QMAX; count++)
-	{
-		printf("(%d,%d)", body.elems[i].x, body.elems[i].y);
-		i = (i + 1) % QMAX;
-	}
-	puts("");
+	// puts("Body:");
+	// int count = 0;
+	// for (int i = body.front; count < (body.rear + QMAX - body.front) % QMAX; count++)
+	// {
+	// 	printf("(%d,%d)", body.elems[i].x, body.elems[i].y);
+	// 	i = (i + 1) % QMAX;
+	// }
+	// puts("");
 #endif
 
 	coord tmp = {-1, -1};
@@ -160,12 +168,12 @@ struct Point walk(struct Player *player)
 	}
 
 #ifdef DEBUG
-	puts("Foods:");
-	for (int i = 0; i < foods.len; i++)
-	{
-		printf("(%d,%d)", foods.elems[i].x, foods.elems[i].y);
-	}
-	puts("");
+	// puts("Foods:");
+	// for (int i = 0; i < foods.len; i++)
+	// {
+	// 	printf("(%d,%d)", foods.elems[i].x, foods.elems[i].y);
+	// }
+	// puts("");
 #endif
 
 	double max_value = INT_MIN;
@@ -184,7 +192,7 @@ struct Point walk(struct Player *player)
 			{
 				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body, max_len - current_len);
 #ifdef ROUTE_DEBUG
-				printf("from(%d,%d),to(%d,%d)is: %d\n", tmp.x, tmp.y, foods.elems[i].x, foods.elems[i].y, dists.elems[dists.len - 1]);
+				// printf("from(%d,%d),to(%d,%d)is: %d\n", tmp.x, tmp.y, foods.elems[i].x, foods.elems[i].y, dists.elems[dists.len - 1]);
 #endif
 			}
 
@@ -210,7 +218,7 @@ struct Point walk(struct Player *player)
 		}
 	}
 #ifdef DEBUG
-	printf("next: (%d,%d)\n", next.x, next.y);
+	// printf("next: (%d,%d)\n", next.x, next.y);
 #endif
 
 	head = next;
@@ -221,8 +229,9 @@ struct Point walk(struct Player *player)
 		max_len++;
 	}
 
-	body.elems[body.rear++] = head;
-	body.rear = body.rear % QMAX;
+	body.elems[body.rear] = head;
+	body.rear = (body.rear + 1) % QMAX;
+
 	if (current_len < max_len)
 	{
 		current_len++;
@@ -287,7 +296,10 @@ double get_value_by_food(coord point, arrayt dists)
 
 	for (int index = 0; index < dists.len; index++)
 	{
-		dist = dists.elems[index];
+		if (dist != INT_MAX)
+		{
+			dist = dists.elems[index] + 1;
+		}
 
 		value_tmp = evaluate(dist);
 
@@ -316,17 +328,17 @@ double evaluate(int distence)
 {
 	if (distence == INT_MAX)
 	{
-		return -1;
+		return -1; // modify?
 	}
 
-	if (distence > 0)
-	{
-		return (1.0 / distence);
-	}
-	else
-	{
-		return INT_MAX;
-	}
+	// if (distence > 0)
+	// {
+	return (1.0 / distence);
+	// }
+	// else
+	// {
+	// 	return INT_MAX;
+	// }
 }
 
 // ret INT_MAX if: 1. not valid 2. unreachable
@@ -335,6 +347,7 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body, int g
 	if (in_map(start, size))
 	{
 		if (map[start.x][start.y] != WALL &&
+			map[start.x][start.y] != PLAYER_B &&
 			!overlap(start, body, (body.rear - body.front + QMAX) % QMAX - 1, QMAX) &&
 			!(start.x == body.elems[body.front].x &&
 			  start.y == body.elems[body.front].y &&
@@ -391,6 +404,7 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body, int g
 				if (in_map(tmp, size))
 				{
 					if (map[tmp.x][tmp.y] != WALL &&
+						map[tmp.x][tmp.y] != PLAYER_B &&
 						!overlap(tmp, body, (body.rear - body.front + QMAX) % QMAX - 1, QMAX) &&
 						!(tmp.x == body.elems[body.front].x &&
 						  tmp.y == body.elems[body.front].y &&
@@ -430,7 +444,7 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body, int g
 int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size)
 {
 	if ((point.x == shrink_index ||
-		 point.x == size.x - shrink_index) &&
+		 point.x == size.x - 1 - shrink_index) &&
 		shrink_index <= point.y &&
 		point.y <= shrink_index)
 	{
@@ -438,7 +452,7 @@ int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size)
 		return 1;
 	}
 	if ((point.y == shrink_index ||
-		 point.y == size.y - shrink_index) &&
+		 point.y == size.y - 1 - shrink_index) &&
 		shrink_index <= point.x &&
 		point.x <= shrink_index)
 	{
