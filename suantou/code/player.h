@@ -41,11 +41,3 @@ struct Point walk(struct Player *player)
 	return initPoint(player->your_posx, player->your_posy);
 }
 
-
-
-void BFS(struct Player* player)
-{
-
-
-
-}

@@ -43,8 +43,33 @@ int init_food(struct Player *player , struct node food[])
 						  food[count].du++;
 			  }
 		  }
+	  return count;
 };
-int judgeapple()  //遍历food数组，是否有最近的且度符合苹果
+
+int judgeapple(struct Player* player, int* xe, int* ye)  //遍历food数组，是否有最近的且度符合苹果
+{
+	int min = 200000;
+	int num = initfood(player, food);
+	int near;
+	int x = player->your_posx, y = player->your_posy;
+	for (int i = 0; i < num; i++)
+	{
+		if (Astar(x, y, food[i].x, food[i].y, player->mat, path) && food[i].du >= 2 && food[i].distance < min)
+		{
+			min = food[i].distance;
+			near = i;
+		}
+	}
+	if (min != 200000)
+	{
+		*xe = food[near].x;
+		*ye = food[near].y;
+		return 1;
+	}
+	return 0;
+}
+
+
 int judgetail()   //是否能找到尾巴，从苹果出开始，用A*，看有没有路径
 void updatesnake()   //新开一个数组存储移动后的蛇身
 
