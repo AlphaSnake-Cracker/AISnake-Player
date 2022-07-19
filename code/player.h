@@ -74,8 +74,7 @@ typedef struct _rect
 
 coord add(coord A, coord B);
 int in_map(coord point, rect size);
-int overlap(coord point, queuet body, int len, int qmax);
-// double evaluate(int distence);
+int overlap(coord point, queuet body, int len, int qmax); // double evaluate(int distence);
 double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, rect size);
 int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow, int round_to_shrink);
 int is_dangerous(coord point, rect size);
@@ -347,9 +346,29 @@ int int_pow(int base, int exponent)
 	}
 	return result;
 }
+
 // ret INT_MAX if: 1. not valid, 2. unreachable
-int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow, int round_to_shrink)
+int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, int grow, int round_to_shrink)
 {
+	typedef struct _spl_queue
+	{
+		int front, rear;
+		coord elems[QMAX];
+		int fronts[QMAX];
+		int grows[QMAX];
+	} spl_queue;
+	spl_queue queue = {0, 0};
+
+	// int len = (body.rear - body.front + QMAX) % QMAX;
+	// int index = 0;
+	// for (int i = 0; i < len; i++)
+	// {
+	// 	queue.elems[body.rear++] = raw_body.elems[index];
+	// 	queue.grows[body.rear - 1] = grow;
+	// 	queue.fronts[body.rear - 1] = raw_body.front;
+	// 	index = (index + 1) % QMAX;
+	// }
+
 	int searched[ROW_MAX][COL_MAX] = {0};
 
 	//====================
@@ -373,10 +392,10 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 	{
 		if (map[start.x][start.y] != WALL &&
 			map[start.x][start.y] != PLAYER_B &&
-			!overlap(start, body, (body.rear - body.front + QMAX) % QMAX - 1, QMAX) &&
-			!(start.x == body.elems[body.front].x &&
-			  start.y == body.elems[body.front].y &&
-			  (body.rear + QMAX - body.front) % QMAX == 2))
+			!overlap(start, BFS_body, (BFS_body.rear - BFS_body.front + QMAX) % QMAX - 1, QMAX) &&
+			!(start.x == BFS_body.elems[BFS_body.front].x &&
+			  start.y == BFS_body.elems[BFS_body.front].y &&
+			  (BFS_body.rear + QMAX - BFS_body.front) % QMAX == 2))
 		{
 			if (start.x == dest.x && start.y == dest.y)
 			{
@@ -386,9 +405,9 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 			{
 				if (grow == 0)
 				{
-					if (body.rear != body.front)
+					if (BFS_body.rear != BFS_body.front)
 					{
-						body.front = (body.front + 1) % QMAX;
+						BFS_body.front = (BFS_body.front + 1) % QMAX;
 					}
 				}
 				else
@@ -408,9 +427,11 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 	}
 	//====================
 
-	queuet queue = {0, 0};
-	queue.elems[queue.rear++] = start;
-	queue.rear = queue.rear % QMAX;
+	// queuet queue = {0, 0};
+	queue.grows[queue.rear] = grow;
+	queue.fronts[queue.rear] = BFS_body.front;
+	queue.elems[queue.rear] = start;
+	queue.rear = (queue.rear + 1) % QMAX;
 
 	int count = 0;
 	searched[start.x][start.y] = 1;
@@ -442,6 +463,8 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 
 		while (queue.front != rear_tmp)
 		{
+			int front_tmp = queue.front;
+
 			current = queue.elems[queue.front++];
 			queue.front = queue.front % QMAX;
 
@@ -452,10 +475,10 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 				{
 					if (map[tmp.x][tmp.y] != WALL &&
 						map[tmp.x][tmp.y] != PLAYER_B &&
-						!overlap(tmp, body, (body.rear - body.front + QMAX) % QMAX - 1, QMAX) &&
-						!(tmp.x == body.elems[body.front].x &&
-						  tmp.y == body.elems[body.front].y &&
-						  (body.rear + QMAX - body.front) % QMAX == 2))
+						!overlap(tmp, BFS_body, (BFS_body.rear - queue.fronts[front_tmp] + QMAX) % QMAX - 1, QMAX) &&
+						!(tmp.x == BFS_body.elems[queue.fronts[front_tmp]].x &&
+						  tmp.y == BFS_body.elems[queue.fronts[front_tmp]].y &&
+						  (BFS_body.rear + QMAX - queue.fronts[front_tmp]) % QMAX == 2))
 					{
 						if (searched[tmp.x][tmp.y] == 0)
 						{
@@ -464,25 +487,43 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 								return count;
 							}
 
+							if (queue.grows[front_tmp] == 0)
+							{
+								if (BFS_body.rear != queue.fronts[front_tmp])
+								{
+									queue.fronts[queue.rear] = (queue.fronts[front_tmp] + 1) % QMAX;
+								}
+								else
+								{
+									queue.fronts[queue.rear] = queue.fronts[front_tmp];
+								}
+								queue.grows[queue.rear] = queue.grows[front_tmp];
+							}
+							else
+							{
+								queue.fronts[queue.rear] = queue.fronts[front_tmp];
+								queue.grows[queue.rear] = queue.grows[front_tmp] - 1;
+							}
+
 							searched[tmp.x][tmp.y] = 1;
-							queue.elems[queue.rear++] = tmp;
-							queue.rear = queue.rear % QMAX;
+							queue.elems[queue.rear] = tmp;
+							queue.rear = (queue.rear + 1) % QMAX;
 						}
 					}
 				}
 			}
 		}
-		if (grow == 0)
-		{
-			if (body.rear != body.front)
-			{
-				body.front = (body.front + 1) % QMAX;
-			}
-		}
-		else
-		{
-			grow--;
-		}
+		// if (grow == 0)
+		// {
+		// 	if (body.rear != body.front)
+		// 	{
+		// 		body.front = (body.front + 1) % QMAX;
+		// 	}
+		// }
+		// else
+		// {
+		// 	grow--;
+		// }
 	}
 	return INT_MAX;
 }
