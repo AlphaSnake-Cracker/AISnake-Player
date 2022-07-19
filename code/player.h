@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "../include/playerbase.h"
 #include <stdio.h>
+#include <math.h>
 
 #define DEBUG
 
@@ -27,6 +28,14 @@ typedef struct Path_Info
 	int prev_y;
 }
 Path;
+
+struct Snake_Info
+{
+	int length;
+	int max_length;
+	Elem body[400];
+}
+snake;
 
 int step[4][2] = {0, 1, 0, -1, 1, 0, -1, 0};
 
@@ -127,57 +136,14 @@ void Weighting(struct Player *player, Path path[20][20], int weight[20][20])
 void init(struct Player *player)
 {
 	// This function will be executed at the begin of each game, only once.
-}
-
-struct Point walk(struct Player *player)
-{
+	snake.length = 1;
+	snake.max_length = ceil(3.0 * (player -> col_cnt + player -> row_cnt) / 8);
+	snake.body[0].x = player -> your_posx;
+	snake.body[0].y = player -> your_posy;
 	#ifdef DEBUG
-	for (int i = 0; i < player->row_cnt; i++)
-	{
-		for (int j = 0; j < player->col_cnt; j++)
-			printf("%c", player->mat[i][j]);
-		printf("\n");
-	}
+	printf("%d %d %d\n", snake.max_length, snake.body[0].x, snake.body[0].y);
 	#endif
-	// This function will be executed in each round.
-	Path path[20][20];
-	BFS_Pathing(player, path);
-	int weight[20][20] = {0};
-	Weighting(player, path, weight);
-	int nx, ny;
-	int max_w = 0;
-	int x = player -> your_posx;
-	int y = player -> your_posy;
-	for (int i = 0; i < 4; i += 1)
-	{
-		nx = player -> your_posx + step[i][0];
-		ny = player -> your_posy + step[i][1];
-		int Cblock(struct Player *, int, int);
-		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2' || Cblock(player, nx, ny) < player -> your_score)
-			continue;
-		if (max_w < weight[nx][ny])
-		{
-			max_w = weight[nx][ny];
-			x = nx;
-			y = ny;
-		}
-		#ifdef DEBUG
-		printf("%d\n", Cblock(player, nx, ny));
-		#endif
-	}
-	while (x == player -> your_posx && y == player -> your_posy)
-	{
-		int r = rand();
-		nx = player -> your_posx + step[r % 4][0];
-		ny = player -> your_posy + step[r % 4][1];
-		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2')
-			continue;
-		x = nx;
-		y = ny;
-	}
-	return initPoint(x, y);
 }
-
 
 int Cblock(struct Player * player, int nx, int ny)              //this function will be used to find the current connected blocks contain the blocks number
 {
@@ -211,4 +177,67 @@ int Cblock(struct Player * player, int nx, int ny)              //this function 
 		}
 	}
 	return sum;
+}
+
+void Snake_Move(struct Player *player, int x, int y)
+{
+	if (player -> mat[x][y] == 'o' || player -> mat[x][y] == 'O')
+		snake.max_length += 1;
+	for (int i = snake.length - 1; i >= 0; i -= 1)
+		snake.body[i + 1] = snake.body[i];
+	snake.body[0].x = x;
+	snake.body[0].y = y;
+	if (snake.length < snake.max_length)
+		snake.length += 1;
+}
+
+struct Point walk(struct Player *player)
+{
+	#ifdef DEBUG
+	for (int i = 0; i < player->row_cnt; i++)
+	{
+		for (int j = 0; j < player->col_cnt; j++)
+			printf("%c", player->mat[i][j]);
+		printf("\n");
+	}
+	for (int i = 0; i < snake.length; i += 1)
+		printf("%d %d\n", snake.body[i].x, snake.body[i].y);
+	#endif
+	// This function will be executed in each round.
+	Path path[20][20];
+	BFS_Pathing(player, path);
+	int weight[20][20] = {0};
+	Weighting(player, path, weight);
+	int nx, ny;
+	int max_w = 0;
+	int x = player -> your_posx;
+	int y = player -> your_posy;
+	for (int i = 0; i < 4; i += 1)
+	{
+		nx = player -> your_posx + step[i][0];
+		ny = player -> your_posy + step[i][1];
+		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2' || Cblock(player, nx, ny) < snake.length)
+			continue;
+		if (max_w < weight[nx][ny])
+		{
+			max_w = weight[nx][ny];
+			x = nx;
+			y = ny;
+		}
+		#ifdef DEBUG
+		printf("%d\n", Cblock(player, nx, ny));
+		#endif
+	}
+	while (x == player -> your_posx && y == player -> your_posy)
+	{
+		int r = rand();
+		nx = player -> your_posx + step[r % 4][0];
+		ny = player -> your_posy + step[r % 4][1];
+		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2')
+			continue;
+		x = nx;
+		y = ny;
+	}
+	Snake_Move(player, x, y);
+	return initPoint(x, y);
 }
