@@ -152,7 +152,8 @@ struct Point walk(struct Player *player)
 	{
 		nx = player -> your_posx + step[i][0];
 		ny = player -> your_posy + step[i][1];
-		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt)
+		int Cblock(struct Player *, int, int);
+		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2' || Cblock(player, nx, ny) < player -> your_score)
 			continue;
 		if (max_w < weight[nx][ny])
 		{
@@ -160,23 +161,54 @@ struct Point walk(struct Player *player)
 			x = nx;
 			y = ny;
 		}
+		#ifdef DEBUG
+		printf("%d\n", Cblock(player, nx, ny));
+		#endif
 	}
-	if (x == player -> your_posx && y == player -> your_posy)
+	while (x == player -> your_posx && y == player -> your_posy)
 	{
-		int i = rand();
-		while (1)
-		{
-			nx = player -> your_posx + step[i % 4][0];
-			ny = player -> your_posy + step[i % 4][1];
-			if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '2')
-			{
-				i = rand();
-				continue;
-			}
-			x = nx;
-			y = ny;
-			break;
-		}
+		int r = rand();
+		nx = player -> your_posx + step[r % 4][0];
+		ny = player -> your_posy + step[r % 4][1];
+		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2')
+			continue;
+		x = nx;
+		y = ny;
 	}
 	return initPoint(x, y);
+}
+
+
+int Cblock(struct Player * player, int nx, int ny)              //this function will be used to find the current connected blocks contain the blocks number
+{
+	int l, r;
+	int sum = 0;
+	int visit[20][20] = {0};
+	Elem q[400];
+	l = 0;
+	r = 0;
+	Elem head;
+	head.x = nx;
+	head.y = ny;
+	q[r ++] = head;
+	visit[head.x][head.y] = 1;
+	while(l < r)
+	{
+		Elem now = q[l++];
+		for (int i = 0; i < 4; i++) 
+		{
+            int tx = now.x + step[i][0];
+            int ty = now.y + step[i][1];
+			if(Is_Legal(player, visit, tx, ty))
+			{
+				visit[tx][ty] = 1;
+				Elem t;
+				t.x = tx;
+				t.y = ty;
+				q[r ++] = t;
+				sum ++;
+			}
+		}
+	}
+	return sum;
 }
