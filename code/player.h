@@ -71,7 +71,7 @@ coord add(coord A, coord B);
 int in_map(coord point, coord size);
 int overlap(coord point, queuet body, int len, int qmax);
 // double evaluate(int distence);
-double get_value_by_food(coord point, arrayt dists);
+double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, coord size);
 int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow);
 int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size);
 int int_pow(int base, int exponent);
@@ -83,6 +83,7 @@ int int_pow(int base, int exponent);
 coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
 coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 int shrink_value_table[8] = {-1, 6, 4, 4, 3, 3, 2, 2};
+coord size = {-1, -1};
 
 queuet body = {0, 0};				// record snake body
 int max_len = -1, current_len = -1; // record current length and max length
@@ -99,6 +100,8 @@ void init(struct Player *player)
 
 	int m = player->row_cnt;
 	int n = player->col_cnt;
+	size.x = m;
+	size.y = n;
 
 	max_len = (int)ceil((m + n) * (3.0 / 8.0));
 	// shrink_interval = (int)ceil(m * n * 4 / (n < m ? n : m));
@@ -184,8 +187,6 @@ struct Point walk(struct Player *player)
 	coord next = {-1, -1};
 	int max_ptr = -1;
 
-	coord size = {player->row_cnt, player->col_cnt};
-
 	for (int i = 0; i < 4; i++)
 	{
 		if (i != (last_direction + 2) % 4)
@@ -201,15 +202,7 @@ struct Point walk(struct Player *player)
 			}
 
 			double value = -1;
-			value = get_value_by_food(tmp, dists);
-
-			if (player->round_to_shrink < SHRINK_ALERT && is_in_danger(tmp, shrink_index, size))
-			{
-#ifdef ROUTE_DEBUG
-				printf("Entered\n");
-#endif
-				value = value / int_pow(10, shrink_value_table[player->round_to_shrink]);
-			}
+			value = get_value_by_food(tmp, dists, foods, player->round_to_shrink, size);
 
 #ifdef ROUTE_DEBUG
 			printf("(%d,%d): %.20lf\n", tmp.x, tmp.y, value);
@@ -296,11 +289,12 @@ int overlap(coord point, queuet body, int len, int qmax)
 
 // must called before getting wall value
 // return -1 if any dist is INT_MAX
-double get_value_by_food(coord point, arrayt dists)
+double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, coord size)
 {
 	int dist = -1;
 	int inf_count = 0;
 	double value = 0;
+	double single_value = 0;
 
 	for (int index = 0; index < dists.len; index++)
 	{
@@ -315,7 +309,18 @@ double get_value_by_food(coord point, arrayt dists)
 		}
 
 		assert(dist > 0);
-		value += 1.0 / dist;
+
+		single_value = 1.0 / dist;
+		//
+		if (round_to_shrink < SHRINK_ALERT && is_in_danger(foods.elems[index], shrink_index, size))
+		{
+#ifdef ROUTE_DEBUG
+			printf("Entered\n");
+#endif
+			single_value = single_value / int_pow(10, shrink_value_table[round_to_shrink]);
+		}
+		//
+		value += single_value;
 	}
 #ifdef DEBUG
 	// printf("value before return: %lf\n", value);
