@@ -67,13 +67,18 @@ typedef struct _arrayt
 	int elems[MAX_LEN];
 } arrayt;
 
+typedef struct _rect
+{
+	int left, right, up, down;
+} rect;
+
 coord add(coord A, coord B);
-int in_map(coord point, coord size);
+int in_map(coord point, rect size);
 int overlap(coord point, queuet body, int len, int qmax);
 // double evaluate(int distence);
-double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, coord size);
-int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow);
-int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size);
+double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, rect size);
+int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow);
+int is_dangerous(coord point, rect size);
 int int_pow(int base, int exponent);
 #ifdef DEBUG
 // void print_queue(queuet queue, const char *s);
@@ -83,7 +88,8 @@ int int_pow(int base, int exponent);
 coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
 coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 int shrink_value_table[8] = {-1, 6, 4, 4, 3, 3, 2, 2};
-coord size = {-1, -1};
+// coord size = {-1, -1};
+rect size = {-1, -1, -1, -1}; // [left, right),[up, down)
 
 queuet body = {0, 0};				// record snake body
 int max_len = -1, current_len = -1; // record current length and max length
@@ -100,8 +106,11 @@ void init(struct Player *player)
 
 	int m = player->row_cnt;
 	int n = player->col_cnt;
-	size.x = m;
-	size.y = n;
+	// size.x = m;
+	// size.y = n;
+	size.down = m;
+	size.right = n;
+	size.up = size.left = 0;
 
 	max_len = (int)ceil((m + n) * (3.0 / 8.0));
 	// shrink_interval = (int)ceil(m * n * 4 / (n < m ? n : m));
@@ -244,7 +253,13 @@ struct Point walk(struct Player *player)
 
 	if (player->round_to_shrink == 1)
 	{
-		shrink_index++;
+		// shrink_index++;
+		// size.x--;
+		// size.y--;
+		size.down--;
+		size.up++;
+		size.right--;
+		size.left++;
 	}
 
 	return initPoint(head.x, head.y);
@@ -256,13 +271,13 @@ coord add(coord A, coord B)
 	return result;
 }
 
-int in_map(coord point, coord size)
+int in_map(coord point, rect size)
 {
-	if (point.x < 0 || point.x >= size.x)
+	if (point.x < size.up || point.x >= size.down)
 	{
 		return 0;
 	}
-	if (point.y < 0 || point.y >= size.y)
+	if (point.y < size.left || point.y >= size.right)
 	{
 		return 0;
 	}
@@ -289,7 +304,7 @@ int overlap(coord point, queuet body, int len, int qmax)
 
 // must called before getting wall value
 // return -1 if any dist is INT_MAX
-double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, coord size)
+double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, rect size)
 {
 	int dist = -1;
 	int inf_count = 0;
@@ -312,7 +327,7 @@ double get_value_by_food(coord point, arrayt dists, block foods, int round_to_sh
 
 		single_value = 1.0 / dist;
 		//
-		if (round_to_shrink < SHRINK_ALERT && is_in_danger(foods.elems[index], shrink_index, size))
+		if (round_to_shrink < SHRINK_ALERT && is_dangerous(foods.elems[index], size))
 		{
 #ifdef ROUTE_DEBUG
 			printf("Entered\n");
@@ -339,7 +354,7 @@ int int_pow(int base, int exponent)
 	return result;
 }
 // ret INT_MAX if: 1. not valid 2. unreachable
-int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow)
+int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow)
 {
 	if (in_map(start, size))
 	{
@@ -438,20 +453,21 @@ int get_dist(coord dest, coord start, char **map, coord size, queuet body, int g
 	return INT_MAX;
 }
 
-int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size)
+// modify?
+int is_dangerous(coord point, rect size)
 {
-	if ((point.x == shrink_index ||
-		 point.x == size.x - 1 - shrink_index) &&
-		shrink_index <= point.y &&
-		point.y <= size.y - 1 - shrink_index)
+	if ((point.x == size.up ||
+		 point.x == size.down - 1) &&
+		size.left <= point.y &&
+		point.y <= size.right - 1)
 	{
 
 		return 1;
 	}
-	if ((point.y == shrink_index ||
-		 point.y == size.y - 1 - shrink_index) &&
-		shrink_index <= point.x &&
-		point.x <= size.x - 1 - shrink_index)
+	if ((point.y == size.left ||
+		 point.y == size.right - 1) &&
+		size.up <= point.x &&
+		point.x <= size.down - 1)
 	{
 
 		return 1;
