@@ -103,7 +103,7 @@ void init(struct Player *player)
 
 	current_len = 1;
 
-	coord point = {-1, -1};
+	// coord point = {-1, -1};
 
 	for (int i = 0; i < player->row_cnt; i++)
 	{
@@ -111,16 +111,14 @@ void init(struct Player *player)
 		{
 			if (player->mat[i][j] == PLAYER_A)
 			{
-				point.x = i;
-				point.y = j;
-				head = point;
+				head.x = i;
+				head.y = j;
 				body.elems[body.rear++] = head;
 			}
 		}
 	}
 }
 
-// int step[4][2] = {0, 1, 0, -1, 1, 0, -1, 0};
 struct Point walk(struct Player *player)
 {
 #ifdef PRT_MAP
@@ -294,7 +292,7 @@ int overlap(coord point, queuet body, int len, int qmax)
 // return -1 if any dist is INT_MAX
 double get_value_by_food(coord point, arrayt dists)
 {
-	int dist;
+	int dist = -1;
 	double value = 0;
 	double value_tmp;
 
