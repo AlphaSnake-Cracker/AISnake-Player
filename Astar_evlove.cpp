@@ -2,8 +2,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
-#define MaxSize 500//Ëæ±ãÉèµÄÖµ
-#define INF 65535//ÎÞÇî´ó
+#define MaxSize 500//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+#define INF 65535//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 typedef struct
 {
@@ -12,14 +12,14 @@ typedef struct
 	int parent;
 	int G;
 	int H;
-	int F;//G,H,FÊÇÑ°Â·Ê±ÒªÓÃµÄ¼¸¸ö²ÎÊý£¬²»ÓÃ¹ÜËû
+	int F;//G,H,Fï¿½ï¿½Ñ°Â·Ê±Òªï¿½ÃµÄ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¹ï¿½ï¿½ï¿½
 }Aelem;
 
 typedef struct
 {
 	int top;
 	Aelem list[MaxSize];
-	int ElemSituation[MaxSize];//0´ú±íÕâ¸öÎ»ÖÃÃ»ÓÐ·ÅÔªËØ£¬1´ú±íÓÐÔªËØ£¬-1´ú±í¸ÃÔªËØ±»ÒÆ¶¯µ½closelistÖÐÁË
+	int ElemSituation[MaxSize];//0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½Ã»ï¿½Ð·ï¿½Ôªï¿½Ø£ï¿½1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½Ø£ï¿½-1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½Ø±ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½closelistï¿½ï¿½ï¿½ï¿½
 }AstarList;
 
 typedef struct
@@ -32,9 +32,9 @@ void InitList(AstarList **Alist);
 void AddOpenList(Aelem *elem, AstarList *Alist);
 void AddCloseList(AstarList *OpenList, AstarList *CloseList, int x, int y);
 void GetF(AstarList *OpenList, Aelem *elem, int x, int y);
-int Astar_Find_road(int x, int y, Path path[MaxSize], int map[MaxSize][MaxSize]);
+int Astar_Find_road(int startx, int starty, int x, int y, Path path[MaxSize], int map[MaxSize][MaxSize]);
 
-int Astar_Find_road(int startx, int starty, int x, int y, Path path[MaxSize], int map[MaxSize][MaxSize])//Ê¹ÓÃAstarËã·¨Ê±µ÷ÓÃµÄ½Ó¿Ú
+int Astar_Find_road(int startx, int starty, int x, int y, Path path[MaxSize], int map[MaxSize][MaxSize])//Ê¹ï¿½ï¿½Astarï¿½ã·¨Ê±ï¿½ï¿½ï¿½ÃµÄ½Ó¿ï¿½
 {
 	int direction[4][2] = { {0,1},{0,-1},{1,0},{-1,0} };
 	int position[MaxSize][MaxSize] = { 0 };
@@ -45,7 +45,7 @@ int Astar_Find_road(int startx, int starty, int x, int y, Path path[MaxSize], in
 	InitList(&OpenList);
 	InitList(&CloseList);
 	Aelem elem;
-	elem.x = startx, elem.y = starty;//elemÐèÒª³õÊ¼ÐèÒª¸³ÖµÎªÉßÍ·¿ªÊ¼µÄÎ»ÖÃ
+	elem.x = startx, elem.y = starty;//elemï¿½ï¿½Òªï¿½ï¿½Ê¼ï¿½ï¿½Òªï¿½ï¿½ÖµÎªï¿½ï¿½Í·ï¿½ï¿½Ê¼ï¿½ï¿½Î»ï¿½ï¿½
 	elem.parent = -1;
 	elem.H = (x - elem.x) * 10 + (y - elem.y) * 10;
 	elem.G = 0;
@@ -76,7 +76,7 @@ void AddOpenList(Aelem *elem, AstarList *Alist)
 	Alist->ElemSituation[Alist->top] = 1;
 }
 
-void AddCloseList(AstarList *OpenList, AstarList *CloseList, int x, int y, int position[MaxSize][MaxSize], int direction[4][2], int map[MaxSize][MaxSize], Path path[MaxSize], int *sum, int *isOk)//Õâ¸öx£¬y±íÊ¾Òªµ½´ïµÄÖÕµãµÄ×ø±ê
+void AddCloseList(AstarList *OpenList, AstarList *CloseList, int x, int y, int position[MaxSize][MaxSize], int direction[4][2], int map[MaxSize][MaxSize], Path path[MaxSize], int *sum, int *isOk)//ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½yï¿½ï¿½Ê¾Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 {
 	int Fmin = INF;
 	int j;
@@ -92,7 +92,7 @@ void AddCloseList(AstarList *OpenList, AstarList *CloseList, int x, int y, int p
 			}
 		}
 	}
-	AddOpenList(OpenList->list + j, CloseList);//°ÑÔªËØ¼ÓÈëµ½closelistÖÐ
+	AddOpenList(OpenList->list + j, CloseList);//ï¿½ï¿½Ôªï¿½Ø¼ï¿½ï¿½ëµ½closelistï¿½ï¿½
 	OpenList->ElemSituation[j] = -1;
 	position[OpenList->list[j].x][OpenList->list[j].y] = -1;
 	for (int i = 0; i < 4; i++)
@@ -101,7 +101,7 @@ void AddCloseList(AstarList *OpenList, AstarList *CloseList, int x, int y, int p
 		e.y = OpenList->list[j].y + direction[i][1];
 		if (0 <= e.x && e.x <= 5 && 0 <= e.y && e.y <= 5)//debug
 		{
-			if (position[e.x][e.y] == 0 && map[e.x][e.y] == 1)//Èç¹ûÕâ¸öµãÃ»ÓÐÊÔÌ½¹ý¶øÇÒÄÜÕâ×ß
+			if (position[e.x][e.y] == 0 && map[e.x][e.y] == 1)//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½Ì½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			{
 				e.parent = j;
 				GetF(OpenList, &e, x, y);
@@ -125,7 +125,7 @@ void AddCloseList(AstarList *OpenList, AstarList *CloseList, int x, int y, int p
 					return;
 				}
 			}
-			else if (position[e.x][e.y] == 1 && map[e.x][e.y] == 0)//Èç¹ûÕâ¸öµãÔÚopenlistÖÐ
+			else if (position[e.x][e.y] == 1 && map[e.x][e.y] == 0)//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½openlistï¿½ï¿½
 			{
 				if (OpenList->list[j].G + 10 < e.G)
 				{
@@ -137,7 +137,7 @@ void AddCloseList(AstarList *OpenList, AstarList *CloseList, int x, int y, int p
 	}
 }
 
-void GetF(AstarList *OpenList, Aelem *elem, int x, int y)//Õâ¸öx£¬y±íÊ¾Òªµ½´ïµÄÖÕµãµÄ×ø±ê
+void GetF(AstarList *OpenList, Aelem *elem, int x, int y)//ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½yï¿½ï¿½Ê¾Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 {
 	if (elem->parent == -1)
 	{
