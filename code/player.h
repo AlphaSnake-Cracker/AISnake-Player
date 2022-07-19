@@ -88,7 +88,6 @@ int int_pow(int base, int exponent);
 coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
 coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
 int shrink_value_table[8] = {-1, 6, 4, 4, 3, 3, 2, 2};
-// coord size = {-1, -1};
 rect size = {-1, -1, -1, -1}; // [left, right),[up, down)
 
 queuet body = {0, 0};				// record snake body
@@ -96,7 +95,6 @@ int max_len = -1, current_len = -1; // record current length and max length
 coord head = {-1, -1};				// record snake head
 int last_direction = -1;			// record the last direciton choosed
 int shrink_index = -100;			// record how many times map has shrinked(start from 0)
-// int shrink_interval = -1;
 
 void init(struct Player *player)
 {
@@ -106,8 +104,7 @@ void init(struct Player *player)
 
 	int m = player->row_cnt;
 	int n = player->col_cnt;
-	// size.x = m;
-	// size.y = n;
+
 	size.down = m;
 	size.right = n;
 	size.up = size.left = 0;
@@ -117,8 +114,6 @@ void init(struct Player *player)
 	shrink_index = 0;
 
 	current_len = 1;
-
-	// coord point = {-1, -1};
 
 	for (int i = 0; i < player->row_cnt; i++)
 	{
@@ -230,7 +225,7 @@ struct Point walk(struct Player *player)
 #endif
 
 	// ========================================================================
-	// hand with some "trival" ends
+	// handle some "trival" ends
 	head = next;
 	last_direction = max_ptr;
 
@@ -253,9 +248,6 @@ struct Point walk(struct Player *player)
 
 	if (player->round_to_shrink == 1)
 	{
-		// shrink_index++;
-		// size.x--;
-		// size.y--;
 		size.down--;
 		size.up++;
 		size.right--;
@@ -302,8 +294,6 @@ int overlap(coord point, queuet body, int len, int qmax)
 	return 0;
 }
 
-// must called before getting wall value
-// return -1 if any dist is INT_MAX
 double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, rect size)
 {
 	int dist = -1;
@@ -326,7 +316,8 @@ double get_value_by_food(coord point, arrayt dists, block foods, int round_to_sh
 		assert(dist > 0);
 
 		single_value = 1.0 / dist;
-		//
+
+		//==
 		if (round_to_shrink < SHRINK_ALERT && is_dangerous(foods.elems[index], size))
 		{
 #ifdef ROUTE_DEBUG
@@ -334,7 +325,8 @@ double get_value_by_food(coord point, arrayt dists, block foods, int round_to_sh
 #endif
 			single_value = single_value / int_pow(10, shrink_value_table[round_to_shrink]);
 		}
-		//
+		//==
+
 		value += single_value;
 	}
 #ifdef DEBUG
@@ -353,7 +345,7 @@ int int_pow(int base, int exponent)
 	}
 	return result;
 }
-// ret INT_MAX if: 1. not valid 2. unreachable
+// ret INT_MAX if: 1. not valid, 2. unreachable
 int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow)
 {
 	if (in_map(start, size))
@@ -404,7 +396,6 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 		// print_queue(queue, "search queue");
 #endif
 
-		// int flag = 0;
 		while (queue.front != rear_tmp)
 		{
 			current = queue.elems[queue.front++];
