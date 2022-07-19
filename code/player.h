@@ -12,6 +12,7 @@
 //================================================
 #include <limits.h>
 #include <math.h>
+#include <assert.h>
 
 #define DEBUG
 #define ROUTE_DEBUG
@@ -69,23 +70,25 @@ typedef struct _arrayt
 coord add(coord A, coord B);
 int in_map(coord point, coord size);
 int overlap(coord point, queuet body, int len, int qmax);
-double evaluate(int distence);
+// double evaluate(int distence);
 double get_value_by_food(coord point, arrayt dists);
 int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow);
 int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size);
+int int_pow(int base, int exponent);
 #ifdef DEBUG
-void print_queue(queuet queue, const char *s);
+// void print_queue(queuet queue, const char *s);
 #endif
 
 // anticlockwise
 coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
 coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+int shrink_value_table[8] = {-1, 6, 4, 4, 3, 3, 2, 2};
 
 queuet body = {0, 0};				// record snake body
 int max_len = -1, current_len = -1; // record current length and max length
 coord head = {-1, -1};				// record snake head
 int last_direction = -1;			// record the last direciton choosed
-int shrink_index = -1;				// record how many times map has shrinked(start from 0)
+int shrink_index = -100;			// record how many times map has shrinked(start from 0)
 // int shrink_interval = -1;
 
 void init(struct Player *player)
@@ -135,6 +138,7 @@ struct Point walk(struct Player *player)
 
 #ifdef DEBUG
 	printf("head: (%d,%d)\n", head.x, head.y);
+	printf("tail: (%d,%d)\n", body.elems[body.front].x, body.elems[body.front].y);
 	printf("round_to_shrink: %d\n", player->round_to_shrink);
 	// printf("max_len: %d\n", max_len);
 	// printf("current_len: %d\n", current_len);
@@ -192,22 +196,24 @@ struct Point walk(struct Player *player)
 			{
 				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body, max_len - current_len);
 #ifdef ROUTE_DEBUG
-				// printf("from(%d,%d),to(%d,%d)is: %d\n", tmp.x, tmp.y, foods.elems[i].x, foods.elems[i].y, dists.elems[dists.len - 1]);
+				printf("from(%d,%d),to(%d,%d)is: %d\n", tmp.x, tmp.y, foods.elems[i].x, foods.elems[i].y, dists.elems[dists.len - 1]);
 #endif
 			}
 
 			double value = -1;
+			value = get_value_by_food(tmp, dists);
+
 			if (player->round_to_shrink < SHRINK_ALERT && is_in_danger(tmp, shrink_index, size))
 			{
-				value = 0.001;
-			}
-			else
-			{
-				value = get_value_by_food(tmp, dists);
+#ifdef ROUTE_DEBUG
+				printf("Entered\n");
+#endif
+				value = value / int_pow(10, shrink_value_table[player->round_to_shrink]);
 			}
 
 #ifdef ROUTE_DEBUG
-			printf("(%d,%d): %lf\n", directions[i].x, directions[i].y, value);
+			printf("(%d,%d): %.20lf\n", tmp.x, tmp.y, value);
+			puts("");
 #endif
 			if (max_value <= value)
 			{
@@ -293,56 +299,40 @@ int overlap(coord point, queuet body, int len, int qmax)
 double get_value_by_food(coord point, arrayt dists)
 {
 	int dist = -1;
+	int inf_count = 0;
 	double value = 0;
-	double value_tmp;
 
 	for (int index = 0; index < dists.len; index++)
 	{
+		dist = dists.elems[index];
 		if (dist != INT_MAX)
 		{
-			dist = dists.elems[index] + 1;
+			dist++;
 		}
-
-		value_tmp = evaluate(dist);
-
-		if (value_tmp == -1)
+		else
 		{
-			// value = -1;
-			return -1;
+			inf_count++;
 		}
 
-		if (value != INT_MAX)
-		{
-			if (value_tmp != INT_MAX)
-			{
-				value += value_tmp;
-			}
-			else
-			{
-				value = INT_MAX;
-			}
-		}
+		assert(dist > 0);
+		value += 1.0 / dist;
 	}
-	return value;
+#ifdef DEBUG
+	// printf("value before return: %lf\n", value);
+#endif
+	return value / int_pow(10, inf_count);
 }
 
-double evaluate(int distence)
+int int_pow(int base, int exponent)
 {
-	if (distence == INT_MAX)
+	int result = 1;
+	assert(exponent >= 0);
+	for (int i = 0; i < exponent; i++)
 	{
-		return -1; // modify?
+		result *= base;
 	}
-
-	// if (distence > 0)
-	// {
-	return (1.0 / distence);
-	// }
-	// else
-	// {
-	// 	return INT_MAX;
-	// }
+	return result;
 }
-
 // ret INT_MAX if: 1. not valid 2. unreachable
 int get_dist(coord dest, coord start, char **map, coord size, queuet body, int grow)
 {
@@ -448,7 +438,7 @@ int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size)
 	if ((point.x == shrink_index ||
 		 point.x == size.x - 1 - shrink_index) &&
 		shrink_index <= point.y &&
-		point.y <= shrink_index)
+		point.y <= size.y - 1 - shrink_index)
 	{
 
 		return 1;
@@ -456,7 +446,7 @@ int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size)
 	if ((point.y == shrink_index ||
 		 point.y == size.y - 1 - shrink_index) &&
 		shrink_index <= point.x &&
-		point.x <= shrink_index)
+		point.x <= size.x - 1 - shrink_index)
 	{
 
 		return 1;
@@ -465,17 +455,17 @@ int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size)
 }
 
 #ifdef DEBUG
-void print_queue(queuet queue, const char *s)
-{
-	int count = 0;
-	int l = (queue.rear + QMAX - queue.front) % QMAX;
+// void print_queue(queuet queue, const char *s)
+// {
+// 	int count = 0;
+// 	int l = (queue.rear + QMAX - queue.front) % QMAX;
 
-	printf("%s: ", s);
-	for (int i = queue.front; count < l; count++)
-	{
-		printf("(%d,%d)", queue.elems[i].x, queue.elems[i].y);
-		i = (i + 1) % QMAX;
-	}
-	puts("");
-}
+// 	printf("%s: ", s);
+// 	for (int i = queue.front; count < l; count++)
+// 	{
+// 		printf("(%d,%d)", queue.elems[i].x, queue.elems[i].y);
+// 		i = (i + 1) % QMAX;
+// 	}
+// 	puts("");
+// }
 #endif
