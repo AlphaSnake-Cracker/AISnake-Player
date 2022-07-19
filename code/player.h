@@ -254,6 +254,9 @@ struct Point walk(struct Player *player)
 		size.left++;
 	}
 
+	//
+
+	//
 	return initPoint(head.x, head.y);
 }
 
@@ -359,6 +362,9 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 	} spl_queue;
 	spl_queue queue = {0, 0};
 
+	// queuet queue = {0, 0};
+	queue.grows[queue.rear] = grow;
+
 	// int len = (body.rear - body.front + QMAX) % QMAX;
 	// int index = 0;
 	// for (int i = 0; i < len; i++)
@@ -403,6 +409,11 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 			}
 			else
 			{
+				if (map[start.x][start.y] == FOOD || map[start.x][start.y] == SHIELD)
+				{
+					queue.grows[queue.rear]++;
+				}
+
 				if (grow == 0)
 				{
 					if (BFS_body.rear != BFS_body.front)
@@ -426,9 +437,6 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 		return -1;
 	}
 	//====================
-
-	// queuet queue = {0, 0};
-	queue.grows[queue.rear] = grow;
 	queue.fronts[queue.rear] = BFS_body.front;
 	queue.elems[queue.rear] = start;
 	queue.rear = (queue.rear + 1) % QMAX;
@@ -482,6 +490,11 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 					{
 						if (searched[tmp.x][tmp.y] == 0)
 						{
+							if (map[tmp.x][tmp.y] == FOOD || map[tmp.x][tmp.y] == SHIELD)
+							{
+								queue.grows[front_tmp]++;
+							}
+
 							if (tmp.x == dest.x && tmp.y == dest.y)
 							{
 								return count;
