@@ -153,8 +153,8 @@ struct Point walk(struct Player *player)
 #endif
 
 	coord tmp = {-1, -1};
-
-	// get foods
+	// ========================================================================
+	// scan the whole map to get foods position
 	block foods = {0};
 	for (int i = 0; i < player->row_cnt; i++)
 	{
@@ -176,6 +176,8 @@ struct Point walk(struct Player *player)
 	// puts("");
 #endif
 
+	// ========================================================================
+	// making decision
 	double max_value = INT_MIN;
 	coord next = {-1, -1};
 	int max_ptr = -1;
@@ -221,6 +223,8 @@ struct Point walk(struct Player *player)
 	// printf("next: (%d,%d)\n", next.x, next.y);
 #endif
 
+	// ========================================================================
+	// hand with some "trival" ends
 	head = next;
 	last_direction = max_ptr;
 
