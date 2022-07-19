@@ -77,7 +77,7 @@ int in_map(coord point, rect size);
 int overlap(coord point, queuet body, int len, int qmax);
 // double evaluate(int distence);
 double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, rect size);
-int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow);
+int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow, int round_to_shrink);
 int is_dangerous(coord point, rect size);
 int int_pow(int base, int exponent);
 #ifdef DEBUG
@@ -196,10 +196,11 @@ struct Point walk(struct Player *player)
 		if (i != (last_direction + 2) % 4)
 		{
 			tmp = add(head, directions[i]);
+
 			arrayt dists = {0};
 			for (int i = 0; i < foods.len; i++)
 			{
-				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body, max_len - current_len);
+				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body, max_len - current_len, player->round_to_shrink);
 #ifdef ROUTE_DEBUG
 				printf("from(%d,%d),to(%d,%d)is: %d\n", tmp.x, tmp.y, foods.elems[i].x, foods.elems[i].y, dists.elems[dists.len - 1]);
 #endif
@@ -304,7 +305,8 @@ double get_value_by_food(coord point, arrayt dists, block foods, int round_to_sh
 	for (int index = 0; index < dists.len; index++)
 	{
 		dist = dists.elems[index];
-		if (dist != INT_MAX)
+
+		if (dist != INT_MAX && dist != -1)
 		{
 			dist++;
 		}
@@ -313,7 +315,7 @@ double get_value_by_food(coord point, arrayt dists, block foods, int round_to_sh
 			inf_count++;
 		}
 
-		assert(dist > 0);
+		assert(dist != 0);
 
 		single_value = 1.0 / dist;
 
@@ -346,8 +348,27 @@ int int_pow(int base, int exponent)
 	return result;
 }
 // ret INT_MAX if: 1. not valid, 2. unreachable
-int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow)
+int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow, int round_to_shrink)
 {
+	int searched[ROW_MAX][COL_MAX] = {0};
+
+	//====================
+	// somehow redundant
+
+	if (round_to_shrink == 1)
+	{
+		if (is_dangerous(dest, size))
+		{
+			return INT_MAX - 1;
+		}
+
+		size.down--;
+		size.up++;
+		size.right--;
+		size.left++;
+	}
+	round_to_shrink--;
+
 	if (in_map(start, size))
 	{
 		if (map[start.x][start.y] != WALL &&
@@ -363,25 +384,35 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 			}
 			else
 			{
-				body.front++;
+				if (grow == 0)
+				{
+					if (body.rear != body.front)
+					{
+						body.front = (body.front + 1) % QMAX;
+					}
+				}
+				else
+				{
+					grow--;
+				}
 			}
 		}
 		else
 		{
-			return INT_MAX;
+			return -1;
 		}
 	}
 	else
 	{
-		return INT_MAX;
+		return -1;
 	}
+	//====================
 
 	queuet queue = {0, 0};
 	queue.elems[queue.rear++] = start;
 	queue.rear = queue.rear % QMAX;
 
 	int count = 0;
-	int searched[ROW_MAX][COL_MAX] = {0};
 	searched[start.x][start.y] = 1;
 
 	coord current, tmp;
@@ -389,6 +420,19 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 	int rear_tmp;
 	while (queue.front != queue.rear)
 	{
+		if (round_to_shrink == 1)
+		{
+			if (is_dangerous(dest, size))
+			{
+				return INT_MAX - 1;
+			}
+			size.down--;
+			size.up++;
+			size.right--;
+			size.left++;
+		}
+		round_to_shrink--;
+
 		rear_tmp = queue.rear;
 		count++;
 
@@ -413,14 +457,13 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet body, int gr
 						  tmp.y == body.elems[body.front].y &&
 						  (body.rear + QMAX - body.front) % QMAX == 2))
 					{
-						if (tmp.x == dest.x && tmp.y == dest.y)
-						{
-							return count;
-						}
-
 						if (searched[tmp.x][tmp.y] == 0)
 						{
-							// flag = 1;
+							if (tmp.x == dest.x && tmp.y == dest.y)
+							{
+								return count;
+							}
+
 							searched[tmp.x][tmp.y] = 1;
 							queue.elems[queue.rear++] = tmp;
 							queue.rear = queue.rear % QMAX;
