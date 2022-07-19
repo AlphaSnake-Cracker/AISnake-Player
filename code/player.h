@@ -66,10 +66,6 @@ typedef struct _arrayt
 	int elems[MAX_LEN];
 } arrayt;
 
-// anticlockwise
-coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
-coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
-
 coord add(coord A, coord B);
 int in_map(coord point, coord size);
 int overlap(coord point, queuet body, int len, int qmax);
@@ -81,11 +77,15 @@ int is_in_danger(coord point, int shrink_index /*0 mean shrink 1*/, coord size);
 void print_queue(queuet queue, const char *s);
 #endif
 
-queuet body = {0, 0}; // not circular queue
-int max_len = -1, current_len = -1;
-coord head = {-1, -1};
-int last_direction = -1;
-int shrink_index = -1;
+// anticlockwise
+coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
+coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+
+queuet body = {0, 0};				// record snake body
+int max_len = -1, current_len = -1; // record current length and max length
+coord head = {-1, -1};				// record snake head
+int last_direction = -1;			// record the last direciton choosed
+int shrink_index = -1;				// record how many times map has shrinked(start from 0)
 // int shrink_interval = -1;
 
 void init(struct Player *player)
