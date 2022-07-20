@@ -14,9 +14,10 @@
 #include <math.h>
 #include <assert.h>
 
-#define DEBUG
-#define ROUTE_DEBUG
+// #define DEBUG
+// #define ROUTE_DEBUG
 #define PRT_MAP
+#define PRT_OPPONENT
 
 #define SHRINK_ALERT (10)
 
@@ -32,8 +33,8 @@
 #define FOOD 'o'
 #define SHIELD 'O'
 
-#define PLAYER_A '1'
-#define PLAYER_B '2'
+// #define PLAYER_A '1'
+// #define PLAYER_B '2'
 #define PLAYER_OVERLAP '3'
 
 typedef struct _coord
@@ -79,23 +80,41 @@ double get_value_by_food(coord point, arrayt dists, block foods, int round_to_sh
 int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow, int round_to_shrink);
 int is_dangerous(coord point, rect size);
 int int_pow(int base, int exponent);
-void virtual_food_generator(block *foods, rect size);
+void virtual_food_generator(block *foods, rect size, char **mat);
+coord subtract(coord A, coord B);
+void update_opponent_info(struct Player *player);
+
 #ifdef DEBUG
 // void print_queue(queuet queue, const char *s);
 #endif
 
-// anticlockwise
-coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
+// tables:
+coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}}; // anticlockwise
 coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+// coord directions + 1 [4] = {{2, 1}, {1, 2}, {0, 1}, {1, 0}};
+int was_food[4] = {0, 0, 0, 0}; // record food around opponent head
 int shrink_value_table[SHRINK_ALERT] = {-1, 6, 4, 4, 2, 2, 1, 1, 1, 1};
 rect size = {-1, -1, -1, -1}; // [left, right), [up, down)
+int inverse_mapping[3][3] = {
+	{9, 2, 9},
+	{3, 9, 1},
+	{9, 0, 9}}; // a inverse mapping of directions[4]
 
+// record self
+char PLAYER_1 = -1;
 queuet body = {0, 0};				// record snake body
-queuet opponent_body = {0, 0};		// record opponent body
 int max_len = -1, current_len = -1; // record current length and max length
 coord head = {-1, -1};				// record snake head
 int last_direction = -1;			// record the last direciton choosed
-int shrink_index = -100;			// record how many times map has shrinked(start from 0)
+
+// record opponent
+char PLAYER_2 = -1;
+queuet opponent_body = {0, 0};
+int opponent_max = -1;
+int opponent_current = -1;
+coord opponent_head = {-1, -1};
+
+int shrink_index = -100; // record how many times map has shrinked(start from 0)
 
 void init(struct Player *player)
 {
@@ -111,22 +130,37 @@ void init(struct Player *player)
 	size.up = size.left = 0;
 
 	max_len = (int)ceil((m + n) * (3.0 / 8.0));
+	opponent_max = max_len;
 	// shrink_interval = (int)ceil(m * n * 4 / (n < m ? n : m));
 	shrink_index = 0;
 
 	current_len = 1;
+	opponent_current = 0;
 
-	for (int i = 0; i < player->row_cnt; i++)
+	head.x = player->your_posx;
+	head.y = player->your_posy;
+
+	body.elems[body.rear] = head;
+	body.rear = (body.rear + 1) % QMAX;
+	PLAYER_1 = player->mat[head.x][head.y];
+
+	opponent_head.x = player->opponent_posx;
+	opponent_head.y = player->opponent_posy;
+	PLAYER_2 = player->mat[opponent_head.x][opponent_head.y];
+
+	coord tmp = {-1, -1};
+	for (int i = 0; i < 4; i++)
 	{
-		for (int j = 0; j < player->col_cnt; j++)
+		tmp = add(head, directions[i]);
+		if (in_map(tmp, size))
 		{
-			if (player->mat[i][j] == PLAYER_A)
+			if (player->mat[tmp.x][tmp.y] == FOOD || player->mat[tmp.x][tmp.y] == SHIELD)
 			{
-				head.x = i;
-				head.y = j;
-				body.elems[body.rear++] = head;
+				was_food[i] = 1;
+				continue;
 			}
 		}
+		was_food[i] = 0;
 	}
 }
 
@@ -141,7 +175,7 @@ struct Point walk(struct Player *player)
 		}
 		puts("");
 	}
-	puts("");
+	puts("-MAP--END-");
 #endif
 
 #ifdef DEBUG
@@ -151,15 +185,21 @@ struct Point walk(struct Player *player)
 	printf("max_len: %d\n", max_len);
 	// printf("current_len: %d\n", current_len);
 	// printf("last_direction: %d\n", last_direction);
+#endif
 
-	// puts("Body:");
-	// int count = 0;
-	// for (int i = body.front; count < (body.rear + QMAX - body.front) % QMAX; count++)
-	// {
-	// 	printf("(%d,%d)", body.elems[i].x, body.elems[i].y);
-	// 	i = (i + 1) % QMAX;
-	// }
-	// puts("");
+	update_opponent_info(player);
+#ifdef PRT_OPPONENT
+	printf("opponent_head: (%d,%d)\n", opponent_head.x, opponent_head.y);
+	printf("opponent_current: %d\n", opponent_current);
+	printf("opponent_max: %d\n", opponent_max);
+	puts("opponent_body:");
+	int count = 0;
+	for (int i = opponent_body.front; count < (opponent_body.rear + QMAX - opponent_body.front) % QMAX; count++)
+	{
+		printf("(%d,%d)", opponent_body.elems[i].x, opponent_body.elems[i].y);
+		i = (i + 1) % QMAX;
+	}
+	puts("");
 #endif
 
 	coord tmp = {-1, -1};
@@ -181,7 +221,7 @@ struct Point walk(struct Player *player)
 #ifdef DEBUG
 		printf("Entered, foods.len: %d\n", foods.len);
 #endif
-		virtual_food_generator(&foods, size);
+		virtual_food_generator(&foods, size, player->mat);
 	}
 
 #ifdef DEBUG
@@ -263,9 +303,9 @@ struct Point walk(struct Player *player)
 		size.left++;
 	}
 
-	//
-
-	//
+#ifdef PRT_MAP
+	puts("");
+#endif
 	return initPoint(head.x, head.y);
 }
 
@@ -395,7 +435,7 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 	if (in_map(start, size))
 	{
 		if (map[start.x][start.y] != WALL &&
-			map[start.x][start.y] != PLAYER_B &&
+			map[start.x][start.y] != PLAYER_2 &&
 			!overlap(start, BFS_body, (BFS_body.rear - BFS_body.front + QMAX) % QMAX - 1, QMAX) &&
 			!(start.x == BFS_body.elems[BFS_body.front].x &&
 			  start.y == BFS_body.elems[BFS_body.front].y &&
@@ -480,7 +520,7 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 				if (in_map(tmp, size))
 				{
 					if (map[tmp.x][tmp.y] != WALL &&
-						map[tmp.x][tmp.y] != PLAYER_B &&
+						map[tmp.x][tmp.y] != PLAYER_2 &&
 						!overlap(tmp, BFS_body, (BFS_body.rear - queue.fronts[front_tmp] + QMAX) % QMAX - 1, QMAX) &&
 						!(tmp.x == BFS_body.elems[queue.fronts[front_tmp]].x &&
 						  tmp.y == BFS_body.elems[queue.fronts[front_tmp]].y &&
@@ -550,7 +590,7 @@ int is_dangerous(coord point, rect size)
 	return 0;
 }
 
-void virtual_food_generator(block *foods, rect size)
+void virtual_food_generator(block *foods, rect size, char **mat)
 {
 	coord virtual_foods[4] =
 		{{size.up + 1, size.left + 1},
@@ -558,12 +598,17 @@ void virtual_food_generator(block *foods, rect size)
 		 {size.down - 2, size.left + 1},
 		 {size.down - 2, size.right - 2}};
 
+	int count = 0;
 	for (int i = 0; i < 4; i++)
 	{
-		foods->elems[foods->len++] = virtual_foods[i];
+		if (mat[virtual_foods[i].x][virtual_foods[i].y] == '.')
+		{
+			foods->elems[foods->len++] = virtual_foods[i];
+			count++;
+		}
 	}
 
-	if (size.right - size.left <= 4)
+	if (size.right - size.left <= 4 || count <= 1)
 	{
 		coord center[4] = {{4, 5}, {5, 4}, {4, 4}, {5, 5}};
 		for (int i = 0; i < 4; i++)
@@ -573,6 +618,71 @@ void virtual_food_generator(block *foods, rect size)
 	}
 
 	return;
+}
+
+coord subtract(coord A, coord B)
+{
+	coord point = {A.x - B.x, A.y - B.y};
+	return point;
+}
+
+void update_opponent_info(struct Player *player)
+{
+	if (player->opponent_status == -1)
+	{
+		opponent_body.front = opponent_body.rear = 0;
+		assert(0);
+		return;
+	}
+
+	coord tmp = {player->opponent_posx, player->opponent_posy};
+	coord direction = {-1, -1};
+	direction = subtract(tmp, opponent_head);
+
+#ifdef PRT_OPPONENT
+	puts("was food:");
+	for (int i = 0; i < 4; i++)
+	{
+		printf("%d ", was_food[i]);
+	}
+	puts("");
+#endif
+
+	if (0 <= direction.x + 1 && direction.x + 1 < 3 && 0 <= direction.y + 1 && direction.y + 1 < 3)
+	{
+		if (was_food[inverse_mapping[direction.x + 1][direction.y + 1]] == 1)
+		{
+			opponent_max++;
+		}
+	}
+
+	if (opponent_current < opponent_max)
+	{
+		opponent_current++;
+	}
+	else
+	{
+		opponent_body.front = (opponent_body.front + 1) % QMAX;
+	}
+
+	opponent_head.x = player->opponent_posx;
+	opponent_head.y = player->opponent_posy;
+	opponent_body.elems[opponent_body.rear] = opponent_head;
+	opponent_body.rear = (opponent_body.rear + 1) % QMAX;
+
+	for (int i = 0; i < 4; i++)
+	{
+		tmp = add(opponent_head, directions[i]);
+		if (in_map(tmp, size))
+		{
+			if (player->mat[tmp.x][tmp.y] == FOOD || player->mat[tmp.x][tmp.y] == SHIELD)
+			{
+				was_food[i] = 1;
+				continue;
+			}
+		}
+		was_food[i] = 0;
+	}
 }
 
 #ifdef DEBUG
