@@ -55,13 +55,9 @@ int Is_Legal(struct Player *player, int visit[20][20], int nx, int ny, int ds)
 		if(nx == snake.body[i].x && ny == snake.body[i].y)
 		{
 			if(ds > snake.max_length - i)
-			{
 				return 1;
-			}
 			else
-			{
 				return 0;
-			}
 		}
 	}
 	return 1;
