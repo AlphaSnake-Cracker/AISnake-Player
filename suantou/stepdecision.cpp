@@ -11,42 +11,54 @@ struct node {
 	int distance;
 }food[maxsize];
 
-struct point snake_body[maxsize];
 
-int init_food(struct Player *player , struct node food[])
-{ 
+typedef struct Dot {
+	int x;
+	int y;
+}dot;
+
+struct Snakestatus {
+	int length;
+	int maxlength;
+	dot body[40];
+}snake;       
+
+int dir[4][2] = { {0,1},{1,0},{0,-1},{-1,0} };  //ÓÒ ÏÂ  ×ó ÉÏ
+
+int init_food(struct Player* player, struct node food[])
+{
 	int count = 0;
 	int x = player->your_posx;
 	int y = player->your_posy;
 
-	  for(int i=0;i<player->row_cnt;i++)
-		  for (int j = 0; i < player->col_cnt; j++)
-		  {
-			  if (player->mat[i][j] == 'o'||player->mat[i][j]=='O')
-			  {
-				  food[count].x = i;
-				  food[count].y = j;
-				  int manhadun = fabs(x - i) + fabs(y - j);
-				  food[count].distance = manhadun;
-				  count++;
-				  if (j + 1 < player->col_cnt)
-					  if (player->mat[i][j + 1] != '#' && player->mat[i][j + 1] != '1' && player->mat[i][j + 1] != '2')
-						  food[count].du++;
-				  if (j-1>=0)
-					  if (player->mat[i][j-1] != '#' && player->mat[i][j-1] != '1' && player->mat[i][j-1] != '2')
-						  food[count].du++;
-				  if (i+1< player->row_cnt)
-					  if (player->mat[i+1][j] != '#' && player->mat[i+1][j] != '1' && player->mat[i+1][j] != '2')
-						  food[count].du++;
-				  if (i-1>=0)
-					  if (player->mat[i-1][j] != '#' && player->mat[i-1][j] != '1' && player->mat[i-1][j] != '2')
-						  food[count].du++;
-			  }
-		  }
-	  return count;
+	for (int i = 0; i < player->row_cnt; i++)
+		for (int j = 0; i < player->col_cnt; j++)
+		{
+			if (player->mat[i][j] == 'o' || player->mat[i][j] == 'O')
+			{
+				food[count].x = i;
+				food[count].y = j;
+				int manhadun = fabs(x - i) + fabs(y - j);
+				food[count].distance = manhadun;
+				count++;
+				if (j + 1 < player->col_cnt)
+					if (player->mat[i][j + 1] != '#' && player->mat[i][j + 1] != '1' && player->mat[i][j + 1] != '2')
+						food[count].du++;
+				if (j - 1 >= 0)
+					if (player->mat[i][j - 1] != '#' && player->mat[i][j - 1] != '1' && player->mat[i][j - 1] != '2')
+						food[count].du++;
+				if (i + 1 < player->row_cnt)
+					if (player->mat[i + 1][j] != '#' && player->mat[i + 1][j] != '1' && player->mat[i + 1][j] != '2')
+						food[count].du++;
+				if (i - 1 >= 0)
+					if (player->mat[i - 1][j] != '#' && player->mat[i - 1][j] != '1' && player->mat[i - 1][j] != '2')
+						food[count].du++;
+			}
+		}
+	return count;
 };
 
-int judgeapple(struct Player* player, int* xe, int* ye)  //±éÀúfoodÊý×é£¬ÊÇ·ñÓÐ×î½üµÄÇÒ¶È·ûºÏÆ»¹û
+int judgeapple(struct Player* player, int* xe, int* ye, Path path[])  //±éÀúfoodÊý×é£¬ÊÇ·ñÓÐ×î½üµÄÇÒ¶È·ûºÏÆ»¹û
 {
 	int min = 200000;
 	int num = initfood(player, food);
@@ -69,46 +81,113 @@ int judgeapple(struct Player* player, int* xe, int* ye)  //±éÀúfoodÊý×é£¬ÊÇ·ñÓÐ×
 	return 0;
 }
 
+int judgetail(int xe, int ye, int map[20][20], Path path[], int k, struct Player* player) //ÊÇ·ñÄÜÕÒµ½Î²°Í£¬´ÓÆ»¹û³ö¿ªÊ¼£¬ÓÃA*£¬¿´ÓÐÃ»ÓÐÂ·¾¶
+{
+	int x, y;
+	if (player->your_score + 2 > k)
+		x = queue[front + k].x; y = queue[front + k].y;
+	else
+		x = path[k - (player->your_score + 1)].x; y = path[k - (player->your_score + 1)].y;
+	Path path0[401];
+	if (Astar(xe, ye, x, y, map, path0))
+		return 1;
+	else return 0;
+}
 
-int judgetail()   //ÊÇ·ñÄÜÕÒµ½Î²°Í£¬´ÓÆ»¹û³ö¿ªÊ¼£¬ÓÃA*£¬¿´ÓÐÃ»ÓÐÂ·¾¶
-void updatesnake()   //ÐÂ¿ªÒ»¸öÊý×é´æ´¢ÒÆ¶¯ºóµÄÉßÉí
+void snake_Move(struct Player* player, int x, int y,struct Snakestatus falsesnake,int map[20][20])
+{
+	if (player->mat[x][y] == 'o' || player->mat[x][y] == 'O')
+		falsesnake.length += 1;
+
+	int tailx = falsesnake.body[falsesnake.length - 1].x;    //Î²°ÍµÄ×ø±ê
+	int taily = falsesnake.body[falsesnake.length - 1].y;
+
+	for (int i = falsesnake.length - 1; i >= 0; i -= 1)
+		falsesnake.body[i + 1] = falsesnake.body[i];
+
+	falsesnake.body[0].x = x;
+	falsesnake.body[0].y = y;
+
+	if (falsesnake.length < falsesnake.max_length)
+		falsesnake.length += 1;
+
+	map[x][y] = 1;    //ÐÂµØÍ¼Ë¢ÐÂÒ»²½
+	map[tailx][taily] = '.';
+}
+
+void NewMap(struct Player* player, int map[20][20], Path path[], int k)
+{
+	for (int i = 0; i < player->row_cnt; i++)   //¸´ÖÆÍ¼
+		for (int j = 0; j<player->col_cnt; j++)
+			map[i][j] = player->mat[i][j];
+
+	Snakestatus falaesnake = snake;
+	for (int i = 0; i < k; i++)    //¼ÙÉßÒÆ¶¯path³¤
+	{
+		snake_Move(player, path[i].x, path[i].y, falaesnake, map);   
+	}
+}
 
 
-//Ã¿´Î¾ö²ßÇ°Òª¸üÐÂÇ½
-void decision()       //µ±Ç°Í·²¿Î»ÖÃ
+void decision(struct Player* player, int& xe, int& ye, dot path[])       //µ±Ç°Í·²¿Î»ÖÃ
 {
 	//É¨ÃèµØÍ¼£¬ÓÃAstar³õÊ¼»¯µ½Ã¿¸öAppleºÍ¶ÜµÄ¾àÀë£»
-	init_food();
-	  
-
-	if (judgeapple() == 1)  //´æ¹ý´æÔÚ¶È·ûºÏµÄ×î½üµÄApple 
+	int x, y;
+	x = player->your_posx;
+	y = player->your_posy;
+	if (judgeapple(player, &xe, &ye, path) == 1)  //´æ¹ý´æÔÚ¶È·ûºÏµÄ×î½üµÄApple
 	{
-		       updatesnake()  //new ¸ösnake1 Ì½Â·
+		int map[20][20];
+		NewMap(player, map, path, k);
 
-		if (judgetail()==1)   
+		if (judgetail(xe, ye, map, path, k, player) == 1)
 		{
-		      return   //	astar×î½üµÄÂ·ÉÏpath×ßÒ»²½
+			return path[0]; //	astar×î½üµÄÂ·ÉÏpath×ßÒ»²½
 		}
 		else   //can't find tail
 		{
-			  //°´µ½Apple¾àÀëµÝ¼õÀ´¼ìË÷Í·²¿ÖÜÎ§¿É×ßµÄ¸ñ×Ó
+			for(int i=0;i<4;i++)
 			{
-				    updatesnake()//new snake2Ì½Â·,ÒÆ¶¯Ò»²½
-				if(judgetail()==1)  //¿ÉÒÔÕÒµ½Î²°Í  Ìø³ö¼ìË÷²¢returnÕâÒ»²½
-				    	
+				int nextx = x+dir[i][0];
+				int nexty = y+dir[i][1];
+				if (nextx<= -1 || nextx >= player->row_cnt ||nexty <= -1 ||nexty >= player->col_cnt || player->mat[nextx][nexty] == '#' || player->mat[nextx][nexty] == '1' || player->mat[nextx][nexty] == '2')//²»ÄÜ»ØÍ·×²×Ô¼º
+					continue;
+				if (Astar(nextx,nexty,snake.body[snake.length-1],x,snake.body[snake.length-1],player->mat, path))  //¿ÉÒÔÕÒµ½Î²°Í  Ìø³ö¼ìË÷²¢returnÕâÒ»²½
+					return ;
 			}
 		}
 	}
-	else
+	else     //Ã»ÓÐÊ³ÎïºÍ¶Ü£¬Ëæ»ú×ßÒ»²½
 	{
-		            //¼ìË÷Í·²¿ÖÜÎ§¿É×ßµÄ¸ñ×Ó
-		{
-			          updatesnake()   //new snake1Ì½Â·
-			if (judgetail()==1)  //¿ÉÒÔÕÒµ½Î²°Í  Ìø³ö¼ìË÷²¢returnÕâÒ»²½
-				return   //×ø±ê
-		}
+		int r = rand();
+		int nx = player->your_posx + dir[r % 4][0];
+		int ny = player->your_posy + dir[r % 4][1];
+		if (nx <= -1 || nx >= player->row_cnt || ny <= -1 || ny >= player->col_cnt || player->mat[nx][ny] == '#' || player->mat[nx][ny] == '1' || player->mat[nx][ny] == '2')
+			continue;
+
+		if (Astar(nx,ny,snake.body[snake.length - 1], x, snake.body[snake.length - 1], player->mat, path)  //¿ÉÒÔÕÒµ½Î²°Í  Ìø³ö¼ìË÷²¢returnÕâÒ»²½
+					return  ; //×ø±ê
 	}
 
 }
 
+void init(struct Player* Player)
+{
+	snake.length = 1;
+	snake.maxlength = ceil(3.0 * (player->col_cnt + player->row_cnt) / 8);
+	snake.body[0].x = player->your_posx;
+	snake.body[0].y = player->your_posy;
+}
 
+
+
+struct Point walk(struct Player* player)
+{
+	dot path[401];
+	int xe, ye;
+	decision(player, xe, ye, path);
+	int nextx = path[0].x;
+	int nexty = path[0].y;
+	snake_Move(player,nextx,nexty);
+	return InitPoint(nextx,nexty);
+}
