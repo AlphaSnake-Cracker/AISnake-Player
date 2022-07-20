@@ -39,7 +39,7 @@ snake;
 
 int step[4][2] = {0, 1, 0, -1, 1, 0, -1, 0};
 
-int Is_Legal(struct Player *player, int visit[20][20], int nx, int ny)
+int Is_Legal(struct Player *player, int visit[20][20], int nx, int ny, int ds)
 {
 	if (nx <= -1 || nx >= player -> row_cnt)
 		return 0;
@@ -49,6 +49,21 @@ int Is_Legal(struct Player *player, int visit[20][20], int nx, int ny)
 		return 0;
 	if (visit[nx][ny] == 1)
 		return 0;
+	int i;
+	for(i = 0; i < snake.max_length; i ++)
+	{
+		if(nx == snake.body[i].x && ny == snake.body[i].y)
+		{
+			if(ds > snake.max_length - i)
+			{
+				return 1;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+	}
 	return 1;
 }
 
@@ -79,7 +94,7 @@ void BFS_Pathing(struct Player *player, Path path[20][20]) // Pathing with BFS a
 			int nx = dx + step[i][0];
 			int ny = dy + step[i][1];
 			int ns = ds + 1;
-			if (Is_Legal(player, visit, nx, ny))
+			if (Is_Legal(player, visit, nx, ny, ns))
 			{
 				rear += 1;
 				queue[rear].x = nx;
@@ -153,9 +168,11 @@ int Cblock(struct Player * player, int nx, int ny)              //this function 
 	Elem q[400];
 	l = 0;
 	r = 0;
+	int ds = 0;
 	Elem head;
 	head.x = nx;
 	head.y = ny;
+	head.step = ds;
 	q[r ++] = head;
 	visit[head.x][head.y] = 1;
 	while(l < r)
@@ -165,7 +182,8 @@ int Cblock(struct Player * player, int nx, int ny)              //this function 
 		{
             int tx = now.x + step[i][0];
             int ty = now.y + step[i][1];
-			if(Is_Legal(player, visit, tx, ty))
+			int ns = ds + 1;
+			if(Is_Legal(player, visit, tx, ty, ns))
 			{
 				visit[tx][ty] = 1;
 				Elem t;
