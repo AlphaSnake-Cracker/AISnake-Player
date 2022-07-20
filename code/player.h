@@ -18,7 +18,7 @@
 #define ROUTE_DEBUG
 #define PRT_MAP
 
-#define SHRINK_ALERT (8)
+#define SHRINK_ALERT (10)
 
 #define ROW_MAX (20 + 5)
 #define COL_MAX (20 + 5)
@@ -79,6 +79,7 @@ double get_value_by_food(coord point, arrayt dists, block foods, int round_to_sh
 int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow, int round_to_shrink);
 int is_dangerous(coord point, rect size);
 int int_pow(int base, int exponent);
+void virtual_food_generator(block *foods, rect size);
 #ifdef DEBUG
 // void print_queue(queuet queue, const char *s);
 #endif
@@ -86,10 +87,11 @@ int int_pow(int base, int exponent);
 // anticlockwise
 coord surround[8] = {{-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}};
 coord directions[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
-int shrink_value_table[8] = {-1, 6, 4, 4, 3, 3, 2, 2};
-rect size = {-1, -1, -1, -1}; // [left, right),[up, down)
+int shrink_value_table[SHRINK_ALERT] = {-1, 6, 4, 4, 2, 2, 1, 1, 1, 1};
+rect size = {-1, -1, -1, -1}; // [left, right), [up, down)
 
 queuet body = {0, 0};				// record snake body
+queuet opponent_body = {0, 0};		// record opponent body
 int max_len = -1, current_len = -1; // record current length and max length
 coord head = {-1, -1};				// record snake head
 int last_direction = -1;			// record the last direciton choosed
@@ -146,7 +148,7 @@ struct Point walk(struct Player *player)
 	printf("head: (%d,%d)\n", head.x, head.y);
 	printf("tail: (%d,%d)\n", body.elems[body.front].x, body.elems[body.front].y);
 	printf("round_to_shrink: %d\n", player->round_to_shrink);
-	// printf("max_len: %d\n", max_len);
+	printf("max_len: %d\n", max_len);
 	// printf("current_len: %d\n", current_len);
 	// printf("last_direction: %d\n", last_direction);
 
@@ -173,6 +175,13 @@ struct Point walk(struct Player *player)
 				foods.elems[foods.len++] = (tmp.x = i, tmp.y = j, tmp);
 			}
 		}
+	}
+	if (foods.len <= 2)
+	{
+#ifdef DEBUG
+		printf("Entered, foods.len: %d\n", foods.len);
+#endif
+		virtual_food_generator(&foods, size);
 	}
 
 #ifdef DEBUG
@@ -362,18 +371,7 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 	} spl_queue;
 	spl_queue queue = {0, 0};
 
-	// queuet queue = {0, 0};
 	queue.grows[queue.rear] = grow;
-
-	// int len = (body.rear - body.front + QMAX) % QMAX;
-	// int index = 0;
-	// for (int i = 0; i < len; i++)
-	// {
-	// 	queue.elems[body.rear++] = raw_body.elems[index];
-	// 	queue.grows[body.rear - 1] = grow;
-	// 	queue.fronts[body.rear - 1] = raw_body.front;
-	// 	index = (index + 1) % QMAX;
-	// }
 
 	int searched[ROW_MAX][COL_MAX] = {0};
 
@@ -526,17 +524,6 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 				}
 			}
 		}
-		// if (grow == 0)
-		// {
-		// 	if (body.rear != body.front)
-		// 	{
-		// 		body.front = (body.front + 1) % QMAX;
-		// 	}
-		// }
-		// else
-		// {
-		// 	grow--;
-		// }
 	}
 	return INT_MAX;
 }
@@ -561,6 +548,31 @@ int is_dangerous(coord point, rect size)
 		return 1;
 	}
 	return 0;
+}
+
+void virtual_food_generator(block *foods, rect size)
+{
+	coord virtual_foods[4] =
+		{{size.up + 1, size.left + 1},
+		 {size.up + 1, size.right - 2},
+		 {size.down - 2, size.left + 1},
+		 {size.down - 2, size.right - 2}};
+
+	for (int i = 0; i < 4; i++)
+	{
+		foods->elems[foods->len++] = virtual_foods[i];
+	}
+
+	if (size.right - size.left <= 4)
+	{
+		coord center[4] = {{4, 5}, {5, 4}, {4, 4}, {5, 5}};
+		for (int i = 0; i < 4; i++)
+		{
+			foods->elems[foods->len++] = center[i];
+		}
+	}
+
+	return;
 }
 
 #ifdef DEBUG
