@@ -45,7 +45,7 @@ int Is_Legal(struct Player *player, int visit[20][20], int nx, int ny, int ds)
 		return 0;
 	if (ny <= -1 || ny >= player -> col_cnt)
 		return 0;
-	if (player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2')
+	if (player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '2')
 		return 0;
 	if (visit[nx][ny] == 1)
 		return 0;
@@ -244,7 +244,7 @@ struct Point walk(struct Player *player)
 	{
 		nx = player -> your_posx + step[i][0];
 		ny = player -> your_posy + step[i][1];
-		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2' || player -> mat[nx][ny] == '#' || Cblock(player, nx, ny) < snake.max_length)
+		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || Cblock(player, nx, ny) < snake.max_length)
 			continue;
 		if (max_w < weight[nx][ny])
 		{
