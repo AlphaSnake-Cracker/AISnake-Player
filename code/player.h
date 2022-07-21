@@ -21,6 +21,7 @@
 // #define KEEP_OPPONENT
 
 #define SHRINK_ALERT (10)
+#define GENE_THRESHOLD (2)
 
 #define ROW_MAX (20 + 5)
 #define COL_MAX (20 + 5)
@@ -91,6 +92,8 @@ int int_pow(int base, int exponent);
 void virtual_food_generator(block *foods, rect size, char **mat);
 coord subtract(coord A, coord B);
 void update_opponent_info(struct Player *player);
+int some_how_unreachable(coord start, coord dest, rect size, int round_to_shrink);
+int absolute(int x);
 
 #ifdef DEBUG
 // void print_queue(queuet queue, const char *s);
@@ -188,55 +191,82 @@ struct Point walk(struct Player *player)
 
 #ifdef DEBUG
 	printf("round_to_shrink: %d\n", player->round_to_shrink);
+	printf("your_status: %d\n", player->your_status);
 	// printf("last_direction: %d\n", last_direction);
 #endif
 
 	update_opponent_info(player);
 #ifdef PRT_OPPONENT
-	printf("max_len: %d\n", max_len);
-	printf("current_len: %d\n", current_len);
-	puts("body:");
-	int count = 0;
-	for (int i = body.front; count < (body.rear + QMAX - body.front) % QMAX; count++)
-	{
-		printf("(%d,%d)", body.elems[i].x, body.elems[i].y);
-		i = (i + 1) % QMAX;
-	}
-	puts("");
+	// printf("max_len: %d\n", max_len);
+	// printf("current_len: %d\n", current_len);
+	// puts("body:");
+	// int count = 0;
+	// for (int i = body.front; count < (body.rear + QMAX - body.front) % QMAX; count++)
+	// {
+	// 	printf("(%d,%d)", body.elems[i].x, body.elems[i].y);
+	// 	i = (i + 1) % QMAX;
+	// }
+	// puts("");
 
 	printf("opponent_head: (%d,%d)\n", opponent_head.x, opponent_head.y);
-	printf("opponent_current: %d\n", opponent_current);
-	printf("opponent_max: %d\n", opponent_max);
-	puts("opponent_body:");
-	// int count = 0;
-	count = 0;
-	for (int i = opponent_body.front; count < (opponent_body.rear + QMAX - opponent_body.front) % QMAX; count++)
-	{
-		printf("(%d,%d)", opponent_body.elems[i].x, opponent_body.elems[i].y);
-		i = (i + 1) % QMAX;
-	}
-	puts("");
+	// printf("opponent_current: %d\n", opponent_current);
+	// printf("opponent_max: %d\n", opponent_max);
+	// puts("opponent_body:");
+	// // int count = 0;
+	// count = 0;
+	// for (int i = opponent_body.front; count < (opponent_body.rear + QMAX - opponent_body.front) % QMAX; count++)
+	// {
+	// 	printf("(%d,%d)", opponent_body.elems[i].x, opponent_body.elems[i].y);
+	// 	i = (i + 1) % QMAX;
+	// }
+	// puts("");
 #endif
 
 	coord tmp = {-1, -1};
 	// ========================================================================
 	// scan the whole map to get foods position
+	int invalid_index = 0;
 	block foods = {0};
 	for (int i = 0; i < player->row_cnt; i++)
 	{
 		for (int j = 0; j < player->col_cnt; j++)
 		{
-			if (player->mat[i][j] == FOOD || player->mat[i][j] == SHIELD)
+			if (player->mat[i][j] == FOOD)
 			{
 				foods.elems[foods.len++] = (tmp.x = i, tmp.y = j, tmp);
 			}
+			else
+			{
+				if (player->mat[i][j] == SHIELD)
+				{
+					foods.elems[foods.len++] = (tmp.x = i, tmp.y = j, tmp);
+					foods.elems[foods.len++] = tmp;
+					invalid_index++; // modify?
+				}
+			}
 		}
 	}
-	if (foods.len <= 2)
+
+	if (player->opponent_status >= 0 && player->your_status > player->opponent_status)
 	{
-#ifdef DEBUG
-		// printf("Entered, foods.len: %d\n", foods.len);
-#endif
+		tmp.x = player->opponent_posx;
+		tmp.y = player->opponent_posy;
+		for (int i = 0; i < 5; i++)
+		{
+			foods.elems[foods.len++] = tmp; // modify?
+		}
+	}
+
+	for (int i = 0; i < foods.len; i++)
+	{
+		if (some_how_unreachable(head, foods.elems[i], size, player->round_to_shrink))
+		{
+			invalid_index++;
+		}
+	}
+
+	if (foods.len <= 2 || invalid_index > GENE_THRESHOLD)
+	{
 		virtual_food_generator(&foods, size, player->mat);
 	}
 
@@ -437,13 +467,9 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet self_body, i
 	//====================
 	// somehow redundant
 
+	rect size_tmp = size;
 	if (round_to_shrink == 1)
 	{
-		if (is_dangerous(dest, size))
-		{
-			return INT_MAX - 1;
-		}
-
 		size.down--;
 		size.up++;
 		size.right--;
@@ -505,6 +531,12 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet self_body, i
 	{
 		return -1;
 	}
+
+	if (is_dangerous(dest, size_tmp))
+	{
+		return INT_MAX - 1;
+	}
+
 	//====================
 	queue.fronts[queue.rear] = self_body.front;
 	queue.elems[queue.rear] = start;
@@ -726,6 +758,29 @@ void update_opponent_info(struct Player *player)
 			}
 		}
 		was_food[i] = 0;
+	}
+}
+int some_how_unreachable(coord start, coord dest, rect size, int round_to_shrink)
+{
+	if (is_dangerous(dest, size))
+	{
+		int dist = absolute(dest.x - start.x) + absolute(dest.y - start.y);
+		if (dist > round_to_shrink)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+int absolute(int x)
+{
+	if (x >= 0)
+	{
+		return x;
+	}
+	else
+	{
+		return -x;
 	}
 }
 
