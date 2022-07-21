@@ -17,7 +17,7 @@
 // #define DEBUG
 // #define ROUTE_DEBUG
 #define PRT_MAP
-#define PRT_OPPONENT
+// #define PRT_OPPONENT
 
 #define SHRINK_ALERT (10)
 
@@ -179,21 +179,32 @@ struct Point walk(struct Player *player)
 #endif
 
 #ifdef DEBUG
-	printf("head: (%d,%d)\n", head.x, head.y);
-	printf("tail: (%d,%d)\n", body.elems[body.front].x, body.elems[body.front].y);
+
 	printf("round_to_shrink: %d\n", player->round_to_shrink);
-	printf("max_len: %d\n", max_len);
-	// printf("current_len: %d\n", current_len);
 	// printf("last_direction: %d\n", last_direction);
 #endif
 
 	update_opponent_info(player);
 #ifdef PRT_OPPONENT
+	printf("head: (%d,%d)\n", head.x, head.y);
+	printf("tail: (%d,%d)\n", body.elems[body.front].x, body.elems[body.front].y);
+	printf("max_len: %d\n", max_len);
+	printf("current_len: %d\n", current_len);
+	puts("body:");
+	int count = 0;
+	for (int i = body.front; count < (body.rear + QMAX - body.front) % QMAX; count++)
+	{
+		printf("(%d,%d)", body.elems[i].x, body.elems[i].y);
+		i = (i + 1) % QMAX;
+	}
+	puts("");
+
 	printf("opponent_head: (%d,%d)\n", opponent_head.x, opponent_head.y);
 	printf("opponent_current: %d\n", opponent_current);
 	printf("opponent_max: %d\n", opponent_max);
 	puts("opponent_body:");
-	int count = 0;
+	// int count = 0;
+	count = 0;
 	for (int i = opponent_body.front; count < (opponent_body.rear + QMAX - opponent_body.front) % QMAX; count++)
 	{
 		printf("(%d,%d)", opponent_body.elems[i].x, opponent_body.elems[i].y);
@@ -631,7 +642,9 @@ void update_opponent_info(struct Player *player)
 	if (player->opponent_status == -1)
 	{
 		opponent_body.front = opponent_body.rear = 0;
+#ifdef PRT_OPPONENT
 		assert(0);
+#endif
 		return;
 	}
 
