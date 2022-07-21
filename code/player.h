@@ -54,7 +54,7 @@ int Is_Legal(struct Player *player, int visit[20][20], int nx, int ny, int ds)
 	{
 		if(nx == snake.body[i].x && ny == snake.body[i].y)
 		{
-			if(ds > snake.max_length - i)
+			if(ds >= snake.max_length - i)
 				return 1;
 			else
 				return 0;
@@ -65,6 +65,12 @@ int Is_Legal(struct Player *player, int visit[20][20], int nx, int ny, int ds)
 
 void BFS_Pathing(struct Player *player, Path path[20][20]) // Pathing with BFS algorithm
 {
+	for (int i = 0; i < player -> row_cnt; i += 1)
+		for (int j = 0; j < player -> col_cnt; j += 1)
+		{
+			path[i][j].prev_x = -2;
+			path[i][j].prev_y = -2;
+		}
 	int visit[20][20] = {0};
 	Elem queue[400];
 	int front = 0;
@@ -104,7 +110,7 @@ void BFS_Pathing(struct Player *player, Path path[20][20]) // Pathing with BFS a
 	}
 }
 
-void Weighting(struct Player *player, Path path[20][20], int weight[20][20])
+void Weighting(struct Player *player, Path path[20][20], double weight[20][20])
 {
 	for (int i = 0; i < player -> row_cnt; i += 1)
 	{
@@ -112,33 +118,41 @@ void Weighting(struct Player *player, Path path[20][20], int weight[20][20])
 		{
 			if (player -> mat[i][j] == 'o')
 			{
-				int x = i;
-				int y = j;
-				if (path[x][y].prev_x == 0 && path[x][y].prev_y == 0)
+				int temp_x = i;
+				int temp_y = j;
+				int x = 0;
+				int y = 0;
+				if (path[temp_x][temp_y].prev_x == -2 && path[temp_x][temp_y].prev_y == -2)
 					continue;
-				while (path[x][y].prev_x != -1 && path[x][y].prev_y != -1)
+				int length = 0;
+				while (path[temp_x][temp_y].prev_x != -1 && path[temp_x][temp_y].prev_y != -1)
 				{
-					weight[x][y] += 1;
-					int temp_x = path[x][y].prev_x;
-					int temp_y = path[x][y].prev_y;
+					length += 1;
 					x = temp_x;
 					y = temp_y;
+					temp_x = path[x][y].prev_x;
+					temp_y = path[x][y].prev_y;
 				}
+				weight[x][y] += 400.0 / length;
 			}
 			else if (player -> mat[i][j] == 'O')
 			{
-				int x = i;
-				int y = j;
-				if (path[x][y].prev_x == 0 && path[x][y].prev_y == 0)
+				int temp_x = i;
+				int temp_y = j;
+				int x = 0;
+				int y = 0;
+				if (path[temp_x][temp_y].prev_x == -2 && path[temp_x][temp_y].prev_y == -2)
 					continue;
-				while (path[x][y].prev_x != -1 && path[x][y].prev_y != -1)
+				int length = 0;
+				while (path[temp_x][temp_y].prev_x != -1 && path[temp_x][temp_y].prev_y != -1)
 				{
-					weight[x][y] += 1;
-					int temp_x = path[x][y].prev_x;
-					int temp_y = path[x][y].prev_y;
+					length += 1;
 					x = temp_x;
 					y = temp_y;
+					temp_x = path[x][y].prev_x;
+					temp_y = path[x][y].prev_y;
 				}
+				weight[x][y] += 400.0 / length;
 			}
 		}
 	}
@@ -220,17 +234,17 @@ struct Point walk(struct Player *player)
 	// This function will be executed in each round.
 	Path path[20][20];
 	BFS_Pathing(player, path);
-	int weight[20][20] = {0};
+	double weight[20][20] = {0};
 	Weighting(player, path, weight);
 	int nx, ny;
-	int max_w = 0;
+	double max_w = 0;
 	int x = player -> your_posx;
 	int y = player -> your_posy;
 	for (int i = 0; i < 4; i += 1)
 	{
 		nx = player -> your_posx + step[i][0];
 		ny = player -> your_posy + step[i][1];
-		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2' || Cblock(player, nx, ny) < snake.length)
+		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2' || player -> mat[nx][ny] == '#' || Cblock(player, nx, ny) < snake.max_length)
 			continue;
 		if (max_w < weight[nx][ny])
 		{
@@ -239,18 +253,19 @@ struct Point walk(struct Player *player)
 			y = ny;
 		}
 		#ifdef DEBUG
-		printf("%d\n", Cblock(player, nx, ny));
+		printf("%d %lf\n", Cblock(player, nx, ny), weight[nx][ny]);
 		#endif
 	}
 	while (x == player -> your_posx && y == player -> your_posy)
 	{
-		int r = rand();
-		nx = player -> your_posx + step[r % 4][0];
-		ny = player -> your_posy + step[r % 4][1];
-		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '#' || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2')
+		int i = rand() % 4;
+		nx = player -> your_posx + step[i][0];
+		ny = player -> your_posy + step[i][1];
+		if (nx <= -1 || nx >= player -> row_cnt || ny <= -1 || ny >= player -> col_cnt || player -> mat[nx][ny] == '1' || player -> mat[nx][ny] == '2' || player -> mat[nx][ny] == '#')
 			continue;
 		x = nx;
 		y = ny;
+		break;
 	}
 	Snake_Move(player, x, y);
 	return initPoint(x, y);
