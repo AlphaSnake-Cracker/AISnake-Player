@@ -14,10 +14,11 @@
 #include <math.h>
 #include <assert.h>
 
-// #define DEBUG
-// #define ROUTE_DEBUG
+#define DEBUG
+#define ROUTE_DEBUG
 #define PRT_MAP
 // #define PRT_OPPONENT
+// #define KEEP_OPPONENT
 
 #define SHRINK_ALERT (10)
 
@@ -73,11 +74,18 @@ typedef struct _rect
 	int left, right, up, down;
 } rect;
 
+typedef struct _snake_info
+{
+	queuet body;
+	int grow;
+} snake_info;
+
 coord add(coord A, coord B);
 int in_map(coord point, rect size);
 int overlap(coord point, queuet body, int len, int qmax); // double evaluate(int distence);
-double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, rect size);
-int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow, int round_to_shrink);
+double get_value_by_food(arrayt dists, block foods, int round_to_shrink, rect size);
+// int get_dist(coord dest, coord start, char **map, rect size, queuet body, int grow, int round_to_shrink);
+int get_dist(coord dest, coord start, char **map, rect size, queuet self_body, int grow, snake_info opponent, int round_to_shrink);
 int is_dangerous(coord point, rect size);
 int int_pow(int base, int exponent);
 void virtual_food_generator(block *foods, rect size, char **mat);
@@ -114,8 +122,6 @@ int opponent_max = -1;
 int opponent_current = -1;
 coord opponent_head = {-1, -1};
 
-int shrink_index = -100; // record how many times map has shrinked(start from 0)
-
 void init(struct Player *player)
 {
 #ifdef PRT_MAP
@@ -132,7 +138,6 @@ void init(struct Player *player)
 	max_len = (int)ceil((m + n) * (3.0 / 8.0));
 	opponent_max = max_len;
 	// shrink_interval = (int)ceil(m * n * 4 / (n < m ? n : m));
-	shrink_index = 0;
 
 	current_len = 1;
 	opponent_current = 0;
@@ -176,18 +181,18 @@ struct Point walk(struct Player *player)
 		puts("");
 	}
 	puts("-MAP--END-");
+
+	printf("head: (%d,%d)\n", head.x, head.y);
+	printf("tail: (%d,%d)\n", body.elems[body.front].x, body.elems[body.front].y);
 #endif
 
 #ifdef DEBUG
-
 	printf("round_to_shrink: %d\n", player->round_to_shrink);
 	// printf("last_direction: %d\n", last_direction);
 #endif
 
 	update_opponent_info(player);
 #ifdef PRT_OPPONENT
-	printf("head: (%d,%d)\n", head.x, head.y);
-	printf("tail: (%d,%d)\n", body.elems[body.front].x, body.elems[body.front].y);
 	printf("max_len: %d\n", max_len);
 	printf("current_len: %d\n", current_len);
 	puts("body:");
@@ -230,7 +235,7 @@ struct Point walk(struct Player *player)
 	if (foods.len <= 2)
 	{
 #ifdef DEBUG
-		printf("Entered, foods.len: %d\n", foods.len);
+		// printf("Entered, foods.len: %d\n", foods.len);
 #endif
 		virtual_food_generator(&foods, size, player->mat);
 	}
@@ -259,14 +264,17 @@ struct Point walk(struct Player *player)
 			arrayt dists = {0};
 			for (int i = 0; i < foods.len; i++)
 			{
-				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body, max_len - current_len, player->round_to_shrink);
+				snake_info opponent = {{0, 0}, 0};
+				opponent.grow = opponent_max - opponent_current;
+				opponent.body = opponent_body;
+				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body, max_len - current_len, opponent, player->round_to_shrink);
 #ifdef ROUTE_DEBUG
 				printf("from(%d,%d),to(%d,%d)is: %d\n", tmp.x, tmp.y, foods.elems[i].x, foods.elems[i].y, dists.elems[dists.len - 1]);
 #endif
 			}
 
 			double value = -1;
-			value = get_value_by_food(tmp, dists, foods, player->round_to_shrink, size);
+			value = get_value_by_food(dists, foods, player->round_to_shrink, size);
 
 #ifdef ROUTE_DEBUG
 			printf("(%d,%d): %.20lf\n", tmp.x, tmp.y, value);
@@ -357,7 +365,7 @@ int overlap(coord point, queuet body, int len, int qmax)
 	return 0;
 }
 
-double get_value_by_food(coord point, arrayt dists, block foods, int round_to_shrink, rect size)
+double get_value_by_food(arrayt dists, block foods, int round_to_shrink, rect size)
 {
 	int dist = -1;
 	int inf_count = 0;
@@ -385,7 +393,7 @@ double get_value_by_food(coord point, arrayt dists, block foods, int round_to_sh
 		if (round_to_shrink < SHRINK_ALERT && is_dangerous(foods.elems[index], size))
 		{
 #ifdef ROUTE_DEBUG
-			printf("Entered\n");
+			// printf("Entered\n");
 #endif
 			single_value = single_value / int_pow(10, shrink_value_table[round_to_shrink]);
 		}
@@ -411,7 +419,7 @@ int int_pow(int base, int exponent)
 }
 
 // ret INT_MAX if: 1. not valid, 2. unreachable
-int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, int grow, int round_to_shrink)
+int get_dist(coord dest, coord start, char **map, rect size, queuet self_body, int grow, snake_info opponent, int round_to_shrink)
 {
 	typedef struct _spl_queue
 	{
@@ -446,11 +454,11 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 	if (in_map(start, size))
 	{
 		if (map[start.x][start.y] != WALL &&
-			map[start.x][start.y] != PLAYER_2 &&
-			!overlap(start, BFS_body, (BFS_body.rear - BFS_body.front + QMAX) % QMAX - 1, QMAX) &&
-			!(start.x == BFS_body.elems[BFS_body.front].x &&
-			  start.y == BFS_body.elems[BFS_body.front].y &&
-			  (BFS_body.rear + QMAX - BFS_body.front) % QMAX == 2))
+			!overlap(start, self_body, (self_body.rear - self_body.front + QMAX) % QMAX - 1, QMAX) &&
+			!overlap(start, opponent.body, (opponent.body.rear - opponent.body.front + QMAX) % QMAX, QMAX) &&
+			!(start.x == self_body.elems[self_body.front].x &&
+			  start.y == self_body.elems[self_body.front].y &&
+			  (self_body.rear + QMAX - self_body.front) % QMAX == 2))
 		{
 			if (start.x == dest.x && start.y == dest.y)
 			{
@@ -465,14 +473,26 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 
 				if (grow == 0)
 				{
-					if (BFS_body.rear != BFS_body.front)
+					if (self_body.rear != self_body.front)
 					{
-						BFS_body.front = (BFS_body.front + 1) % QMAX;
+						self_body.front = (self_body.front + 1) % QMAX;
 					}
 				}
 				else
 				{
 					grow--;
+				}
+
+				if (opponent.grow == 0)
+				{
+					if (opponent.body.rear != opponent.body.front)
+					{
+						opponent.body.front = (opponent.body.front + 1) % QMAX;
+					}
+				}
+				else
+				{
+					opponent.grow--;
 				}
 			}
 		}
@@ -486,7 +506,7 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 		return -1;
 	}
 	//====================
-	queue.fronts[queue.rear] = BFS_body.front;
+	queue.fronts[queue.rear] = self_body.front;
 	queue.elems[queue.rear] = start;
 	queue.rear = (queue.rear + 1) % QMAX;
 
@@ -531,11 +551,11 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 				if (in_map(tmp, size))
 				{
 					if (map[tmp.x][tmp.y] != WALL &&
-						map[tmp.x][tmp.y] != PLAYER_2 &&
-						!overlap(tmp, BFS_body, (BFS_body.rear - queue.fronts[front_tmp] + QMAX) % QMAX - 1, QMAX) &&
-						!(tmp.x == BFS_body.elems[queue.fronts[front_tmp]].x &&
-						  tmp.y == BFS_body.elems[queue.fronts[front_tmp]].y &&
-						  (BFS_body.rear + QMAX - queue.fronts[front_tmp]) % QMAX == 2))
+						!overlap(tmp, self_body, (self_body.rear - queue.fronts[front_tmp] + QMAX) % QMAX - 1, QMAX) &&
+						!overlap(tmp, opponent.body, (opponent.body.rear - opponent.body.front + QMAX) % QMAX, QMAX) &&
+						!(tmp.x == self_body.elems[queue.fronts[front_tmp]].x &&
+						  tmp.y == self_body.elems[queue.fronts[front_tmp]].y &&
+						  (self_body.rear + QMAX - queue.fronts[front_tmp]) % QMAX == 2))
 					{
 						if (searched[tmp.x][tmp.y] == 0)
 						{
@@ -551,7 +571,7 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 
 							if (queue.grows[front_tmp] == 0)
 							{
-								if (BFS_body.rear != queue.fronts[front_tmp])
+								if (self_body.rear != queue.fronts[front_tmp])
 								{
 									queue.fronts[queue.rear] = (queue.fronts[front_tmp] + 1) % QMAX;
 								}
@@ -574,6 +594,17 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet BFS_body, in
 					}
 				}
 			}
+		}
+		if (opponent.grow == 0)
+		{
+			if (opponent.body.rear != opponent.body.front)
+			{
+				opponent.body.front = (opponent.body.front + 1) % QMAX;
+			}
+		}
+		else
+		{
+			opponent.grow--;
 		}
 	}
 	return INT_MAX;
@@ -642,7 +673,7 @@ void update_opponent_info(struct Player *player)
 	if (player->opponent_status == -1)
 	{
 		opponent_body.front = opponent_body.rear = 0;
-#ifdef PRT_OPPONENT
+#ifdef KEEP_OPPONENT
 		assert(0);
 #endif
 		return;
