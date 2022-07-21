@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
+
 #define MaxSize 500//随便设的值
 #define INF 65535//无穷大
 int direction[4][2] = { {0,1},{0,-1},{1,0},{-1,0} };//试探时可选择的四个方向
@@ -45,6 +46,7 @@ void InitList(AstarList **Alist);
 void AddOpenList(Aelem *elem, AstarList *Alist);
 void AddCloseList(AstarList *OpenList, AstarList *CloseList, int x, int y);
 void GetF(AstarList *OpenList, Aelem *elem, int x, int y);
+
 int main()//用法示例
 {
 	int x, y;
