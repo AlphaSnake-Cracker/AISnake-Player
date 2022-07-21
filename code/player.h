@@ -249,11 +249,18 @@ struct Point walk(struct Player *player)
 
 	if (player->opponent_status >= 0 && player->your_status > player->opponent_status)
 	{
-		tmp.x = player->opponent_posx;
-		tmp.y = player->opponent_posy;
-		for (int i = 0; i < 5; i++)
+		int player_dist = 0;
+		player_dist += absolute(player->your_posx - player->opponent_posx);
+		player_dist += absolute(player->your_posy - player->opponent_posy);
+
+		if (player->your_status >= player_dist)
 		{
-			foods.elems[foods.len++] = tmp; // modify?
+			tmp.x = player->opponent_posx;
+			tmp.y = player->opponent_posy;
+			for (int i = 0; i < 5; i++)
+			{
+				foods.elems[foods.len++] = tmp; // modify?
+			}
 		}
 	}
 
