@@ -14,11 +14,12 @@
 #include <math.h>
 #include <assert.h>
 
-#define DEBUG
-#define ROUTE_DEBUG
-#define PRT_MAP
+// #define DEBUG
+// #define ROUTE_DEBUG
+// #define PRT_MAP
 // #define PRT_OPPONENT
 // #define KEEP_OPPONENT
+// #define ATTACK_DEBUG
 
 #define SHRINK_ALERT (10)
 #define GENE_THRESHOLD (2)
@@ -91,9 +92,10 @@ int is_dangerous(coord point, rect size);
 int int_pow(int base, int exponent);
 void virtual_food_generator(block *foods, rect size, char **mat);
 coord subtract(coord A, coord B);
-void update_opponent_info(struct Player *player);
+coord update_opponent_info(struct Player *player);
 int some_how_unreachable(coord start, coord dest, rect size, int round_to_shrink);
 int absolute(int x);
+int is_valid_direction(coord direction);
 
 #ifdef DEBUG
 // void print_queue(queuet queue, const char *s);
@@ -195,8 +197,10 @@ struct Point walk(struct Player *player)
 	// printf("last_direction: %d\n", last_direction);
 #endif
 
-	update_opponent_info(player);
+	coord opponent_last_direction;
+	opponent_last_direction = update_opponent_info(player);
 #ifdef PRT_OPPONENT
+	printf("opponent_last_direction: (%d,%d)\n", opponent_last_direction.x, opponent_last_direction.y);
 	// printf("max_len: %d\n", max_len);
 	// printf("current_len: %d\n", current_len);
 	// puts("body:");
@@ -240,29 +244,39 @@ struct Point walk(struct Player *player)
 				if (player->mat[i][j] == SHIELD)
 				{
 					foods.elems[foods.len++] = (tmp.x = i, tmp.y = j, tmp);
-					foods.elems[foods.len++] = tmp;
-					invalid_index++; // modify?
+					if (player->opponent_status != -1)
+					{
+						foods.elems[foods.len++] = tmp;
+						invalid_index++; // modify?
+					}
 				}
 			}
 		}
 	}
 
-	if (player->opponent_status >= 0 && player->your_status > player->opponent_status)
-	{
-		int player_dist = 0;
-		player_dist += absolute(player->your_posx - player->opponent_posx);
-		player_dist += absolute(player->your_posy - player->opponent_posy);
+	// 	if (player->opponent_status >= 0 && player->your_status > player->opponent_status)
+	// 	{
+	// 		int player_dist = 0;
+	// 		player_dist += absolute(player->your_posx - player->opponent_posx);
+	// 		player_dist += absolute(player->your_posy - player->opponent_posy);
 
-		if (player->your_status >= player_dist)
-		{
-			tmp.x = player->opponent_posx;
-			tmp.y = player->opponent_posy;
-			for (int i = 0; i < 5; i++)
-			{
-				foods.elems[foods.len++] = tmp; // modify?
-			}
-		}
-	}
+	// 		if (player->your_status >= player_dist)
+	// 		{
+	// 			tmp.x = player->opponent_posx;
+	// 			tmp.y = player->opponent_posy;
+	// 			if (is_valid_direction(opponent_last_direction))
+	// 			{
+	// 				coord target = add(tmp, opponent_last_direction);
+	// #ifdef ATTACK_DEBUG
+	// 				printf("target: (%d,%d)~~~~~~~~~~~~~~~~~~~~~~~\n", target.x, target.y);
+	// #endif
+	// 				for (int i = 0; i < 5; i++)
+	// 				{
+	// 					foods.elems[foods.len++] = target; // modify?
+	// 				}
+	// 			}
+	// 		}
+	// 	}
 
 	for (int i = 0; i < foods.len; i++)
 	{
@@ -299,11 +313,12 @@ struct Point walk(struct Player *player)
 			tmp = add(head, directions[i]);
 
 			arrayt dists = {0};
+
+			snake_info opponent = {{0, 0}, 0};
+			opponent.grow = opponent_max - opponent_current;
+			opponent.body = opponent_body;
 			for (int i = 0; i < foods.len; i++)
 			{
-				snake_info opponent = {{0, 0}, 0};
-				opponent.grow = opponent_max - opponent_current;
-				opponent.body = opponent_body;
 				dists.elems[dists.len++] = get_dist(foods.elems[i], tmp, player->mat, size, body, max_len - current_len, opponent, player->round_to_shrink);
 #ifdef ROUTE_DEBUG
 				printf("from(%d,%d),to(%d,%d)is: %d\n", tmp.x, tmp.y, foods.elems[i].x, foods.elems[i].y, dists.elems[dists.len - 1]);
@@ -706,19 +721,20 @@ coord subtract(coord A, coord B)
 	return point;
 }
 
-void update_opponent_info(struct Player *player)
+// return the last direction that opponent adapted
+coord update_opponent_info(struct Player *player)
 {
+	coord direction = {8, 8};
 	if (player->opponent_status == -1)
 	{
 		opponent_body.front = opponent_body.rear = 0;
 #ifdef KEEP_OPPONENT
 		assert(0);
 #endif
-		return;
+		return direction;
 	}
 
 	coord tmp = {player->opponent_posx, player->opponent_posy};
-	coord direction = {-1, -1};
 	direction = subtract(tmp, opponent_head);
 
 #ifdef PRT_OPPONENT
@@ -765,6 +781,8 @@ void update_opponent_info(struct Player *player)
 		}
 		was_food[i] = 0;
 	}
+
+	return direction;
 }
 int some_how_unreachable(coord start, coord dest, rect size, int round_to_shrink)
 {
@@ -778,6 +796,7 @@ int some_how_unreachable(coord start, coord dest, rect size, int round_to_shrink
 	}
 	return 0;
 }
+
 int absolute(int x)
 {
 	if (x >= 0)
@@ -790,6 +809,17 @@ int absolute(int x)
 	}
 }
 
+int is_valid_direction(coord direction)
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (direction.x == directions[i].x && direction.y == directions[i].y)
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
 #ifdef DEBUG
 // void print_queue(queuet queue, const char *s)
 // {
