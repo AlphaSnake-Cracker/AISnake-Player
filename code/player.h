@@ -16,7 +16,7 @@
 
 // #define DEBUG
 // #define ROUTE_DEBUG
-// #define PRT_MAP
+#define PRT_MAP
 // #define PRT_OPPONENT
 // #define KEEP_OPPONENT
 // #define ATTACK_DEBUG
@@ -254,29 +254,29 @@ struct Point walk(struct Player *player)
 		}
 	}
 
-	// 	if (player->opponent_status >= 0 && player->your_status > player->opponent_status)
-	// 	{
-	// 		int player_dist = 0;
-	// 		player_dist += absolute(player->your_posx - player->opponent_posx);
-	// 		player_dist += absolute(player->your_posy - player->opponent_posy);
+	if (player->opponent_status >= 0 && player->your_status > player->opponent_status)
+	{
+		int player_dist = 0;
+		player_dist += absolute(player->your_posx - player->opponent_posx);
+		player_dist += absolute(player->your_posy - player->opponent_posy);
 
-	// 		if (player->your_status >= player_dist)
-	// 		{
-	// 			tmp.x = player->opponent_posx;
-	// 			tmp.y = player->opponent_posy;
-	// 			if (is_valid_direction(opponent_last_direction))
-	// 			{
-	// 				coord target = add(tmp, opponent_last_direction);
-	// #ifdef ATTACK_DEBUG
-	// 				printf("target: (%d,%d)~~~~~~~~~~~~~~~~~~~~~~~\n", target.x, target.y);
-	// #endif
-	// 				for (int i = 0; i < 5; i++)
-	// 				{
-	// 					foods.elems[foods.len++] = target; // modify?
-	// 				}
-	// 			}
-	// 		}
-	// 	}
+		if (player->your_status >= player_dist)
+		{
+			tmp.x = player->opponent_posx;
+			tmp.y = player->opponent_posy;
+			if (is_valid_direction(opponent_last_direction))
+			{
+				coord target = add(tmp, opponent_last_direction);
+#ifdef ATTACK_DEBUG
+				printf("target: (%d,%d)~~~~~~~~~~~~~~~~~~~~~~~\n", target.x, target.y);
+#endif
+				for (int i = 0; i < 5; i++)
+				{
+					foods.elems[foods.len++] = target; // modify?
+				}
+			}
+		}
+	}
 
 	for (int i = 0; i < foods.len; i++)
 	{
