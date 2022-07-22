@@ -467,8 +467,6 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet self_body, i
 	} spl_queue;
 	spl_queue queue = {0, 0};
 
-	queue.grows[queue.rear] = grow;
-
 	int searched[ROW_MAX][COL_MAX] = {0};
 
 	//====================
@@ -501,7 +499,7 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet self_body, i
 			{
 				if (map[start.x][start.y] == FOOD || map[start.x][start.y] == SHIELD)
 				{
-					queue.grows[queue.rear]++;
+					grow++;
 				}
 
 				if (grow == 0)
@@ -545,8 +543,9 @@ int get_dist(coord dest, coord start, char **map, rect size, queuet self_body, i
 	}
 
 	//====================
-	queue.fronts[queue.rear] = self_body.front;
 	queue.elems[queue.rear] = start;
+	queue.fronts[queue.rear] = self_body.front;
+	queue.grows[queue.rear] = grow;
 	queue.rear = (queue.rear + 1) % QMAX;
 
 	int count = 0;
